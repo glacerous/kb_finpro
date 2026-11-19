@@ -1,0 +1,191 @@
+{
+  "stats": {
+    "anova_nfr_F": 42.27838340841577,
+    "anova_nfr_p": 9.139376469982957e-60,
+    "kruskal_nfr_H": 282.68107014767236,
+    "kruskal_nfr_p": 3.0086461142029874e-57,
+    "anova_rad_F": 50.136478311545126,
+    "anova_rad_p": 1.5175655204144053e-71,
+    "ttest_nfr_kemarau_vs_hujan_t": 56.38995263358088,
+    "ttest_nfr_kemarau_vs_hujan_p": 0.0,
+    "mean_nfr_kemarau": 4.4704209016393435,
+    "mean_nfr_hujan": 2.3048222692166243,
+    "ttest_nfr_mt2_vs_mt1_t": 41.82186341534176,
+    "ttest_nfr_mt2_vs_mt1_p": 0.0,
+    "regional_summary": [
+      {
+        "kabupaten": "Gunungkidul",
+        "in_season_days": 3634,
+        "mean_nfr_mm": 3.297,
+        "pct_need_irrig": 60.099,
+        "mean_rad_mj": 17.664,
+        "mean_solar_m3_1kwp": 40.056,
+        "mean_rain_mm": 8.209
+      },
+      {
+        "kabupaten": "Klaten",
+        "in_season_days": 3634,
+        "mean_nfr_mm": 3.247,
+        "pct_need_irrig": 59.329,
+        "mean_rad_mj": 17.614,
+        "mean_solar_m3_1kwp": 39.905,
+        "mean_rain_mm": 8.218
+      },
+      {
+        "kabupaten": "Wonogiri",
+        "in_season_days": 3634,
+        "mean_nfr_mm": 3.025,
+        "pct_need_irrig": 54.155,
+        "mean_rad_mj": 17.164,
+        "mean_solar_m3_1kwp": 39.295,
+        "mean_rain_mm": 9.12
+      },
+      {
+        "kabupaten": "Bantul",
+        "in_season_days": 3634,
+        "mean_nfr_mm": 2.948,
+        "pct_need_irrig": 55.008,
+        "mean_rad_mj": 17.578,
+        "mean_solar_m3_1kwp": 39.973,
+        "mean_rain_mm": 9.093
+      },
+      {
+        "kabupaten": "Kulon Progo",
+        "in_season_days": 3634,
+        "mean_nfr_mm": 2.635,
+        "pct_need_irrig": 51.486,
+        "mean_rad_mj": 17.557,
+        "mean_solar_m3_1kwp": 39.915,
+        "mean_rain_mm": 10.002
+      },
+      {
+        "kabupaten": "Purworejo",
+        "in_season_days": 3634,
+        "mean_nfr_mm": 2.599,
+        "pct_need_irrig": 52.367,
+        "mean_rad_mj": 17.187,
+        "mean_solar_m3_1kwp": 39.379,
+        "mean_rain_mm": 9.99
+      },
+      {
+        "kabupaten": "Sleman",
+        "in_season_days": 3634,
+        "mean_nfr_mm": 2.589,
+        "pct_need_irrig": 51.486,
+        "mean_rad_mj": 17.133,
+        "mean_solar_m3_1kwp": 39.292,
+        "mean_rain_mm": 10.051
+      },
+      {
+        "kabupaten": "Kab. Magelang",
+        "in_season_days": 3634,
+        "mean_nfr_mm": 2.461,
+        "pct_need_irrig": 49.202,
+        "mean_rad_mj": 16.652,
+        "mean_solar_m3_1kwp": 38.642,
+        "mean_rain_mm": 10.114
+      }
+    ]
+  },
+  "ml": {
+    "train_rows": 23200,
+    "test_rows": 5808,
+    "test_positive_rate": 0.5676652892561983,
+    "models": {
+      "Climatology (baseline)": {
+        "accuracy": 0.5977961432506887,
+        "precision": 0.6820765441455097,
+        "recall": 0.545950864422202,
+        "f1": 0.6064690026954178,
+        "roc_auc": 0.6512335713760274,
+        "tn": 1672,
+        "fp": 839,
+        "fn": 1497,
+        "tp": 1800
+      },
+      "Persistence (baseline)": {
+        "accuracy": 0.7112603305785123,
+        "precision": 0.7472527472527473,
+        "recall": 0.7424931756141947,
+        "f1": 0.7448653582838887,
+        "roc_auc": null,
+        "tn": 1683,
+        "fp": 828,
+        "fn": 849,
+        "tp": 2448
+      },
+      "Logistic Regression (t=0.50)": {
+        "accuracy": 0.731404958677686,
+        "precision": 0.7788121990369181,
+        "recall": 0.7358204428268122,
+        "f1": 0.7567061759201498,
+        "roc_auc": 0.7942065527390734,
+        "tn": 1822,
+        "fp": 689,
+        "fn": 871,
+        "tp": 2426
+      },
+      "Logistic Regression (FN:FP=3:1, t=0.21)": {
+        "accuracy": 0.6014118457300276,
+        "precision": 0.5903237674760854,
+        "recall": 0.9733090688504701,
+        "f1": 0.7349135463185618,
+        "roc_auc": 0.7942065527390734,
+        "tn": 284,
+        "fp": 2227,
+        "fn": 88,
+        "tp": 3209
+      },
+      "Random Forest (t=0.50)": {
+        "accuracy": 0.7272727272727273,
+        "precision": 0.7744312720281961,
+        "recall": 0.7330906885047013,
+        "f1": 0.7531941414770956,
+        "roc_auc": 0.7901913412951469,
+        "tn": 1807,
+        "fp": 704,
+        "fn": 880,
+        "tp": 2417
+      },
+      "Random Forest (FN:FP=3:1, t=0.24)": {
+        "accuracy": 0.6098484848484849,
+        "precision": 0.59644527595884,
+        "recall": 0.9669396420988777,
+        "f1": 0.7377921777366351,
+        "roc_auc": 0.7901913412951469,
+        "tn": 354,
+        "fp": 2157,
+        "fn": 109,
+        "tp": 3188
+      },
+      "Random Forest (FN:FP=5:1, t=0.15)": {
+        "accuracy": 0.5697314049586777,
+        "precision": 0.5688405797101449,
+        "recall": 1.0,
+        "f1": 0.7251732101616628,
+        "roc_auc": 0.7901913412951469,
+        "tn": 12,
+        "fp": 2499,
+        "fn": 0,
+        "tp": 3297
+      }
+    },
+    "thresholds_tuned_on_val_2021_2022": {
+      "lr_fn3_fp1": 0.21,
+      "rf_fn3_fp1": 0.24,
+      "rf_fn5_fp1": 0.15
+    },
+    "top10_rf_features": {
+      "rain_mm": 0.1296,
+      "nfr_mm": 0.1181,
+      "rain_roll3": 0.061,
+      "need_irrigation": 0.0491,
+      "cloud_roll7": 0.0478,
+      "nfr_roll3": 0.0454,
+      "doy_cos": 0.0453,
+      "rain_roll7": 0.0437,
+      "rh_mean_pct": 0.0409,
+      "cloud_mean_pct": 0.039
+    }
+  }
+}
