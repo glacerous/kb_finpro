@@ -73,5 +73,47 @@ CREATE TABLE IF NOT EXISTS fact_irrigation_daily (
     PRIMARY KEY (region_id, date_id)
 );
 
+CREATE TABLE IF NOT EXISTS fact_roi_simulation (
+    region_id               INTEGER NOT NULL REFERENCES dim_region(region_id),
+    scenario_id             INTEGER NOT NULL REFERENCES dim_scenario(scenario_id),
+    land_mode               TEXT NOT NULL,          -- 'Individu (1 ha)' | 'Kelompok Tani (1 ha/kWp)'
+    land_area_ha            DOUBLE PRECISION NOT NULL,
+    fuel_scenario           TEXT NOT NULL,          -- 'Biosolar (Rp 6.800)' | 'Dexlite (Rp 23.700)'
+    fuel_price_idr          INTEGER NOT NULL,
+    diesel_l_per_m3         DOUBLE PRECISION NOT NULL,
+    annual_demand_m3        DOUBLE PRECISION NOT NULL,
+    annual_solar_m3         DOUBLE PRECISION NOT NULL,
+    solar_coverage_pct      DOUBLE PRECISION NOT NULL,
+    annual_diesel_backup_m3 DOUBLE PRECISION NOT NULL,
+    annual_diesel_saved_l   DOUBLE PRECISION NOT NULL,
+    annual_gross_saving_idr BIGINT NOT NULL,
+    annual_opex_low_idr     BIGINT NOT NULL,
+    annual_opex_high_idr    BIGINT NOT NULL,
+    annual_net_saving_low   BIGINT NOT NULL,
+    annual_net_saving_high  BIGINT NOT NULL,
+    bep_low_years           DOUBLE PRECISION,
+    bep_high_years          DOUBLE PRECISION,
+    roi_10yr_low_pct        DOUBLE PRECISION,
+    roi_10yr_high_pct       DOUBLE PRECISION,
+    viable_under_5yr_low    SMALLINT NOT NULL,
+    PRIMARY KEY (region_id, scenario_id, land_mode, fuel_scenario, diesel_l_per_m3)
+);
+
+CREATE TABLE IF NOT EXISTS fact_ml_predictions (
+    region_id       INTEGER NOT NULL REFERENCES dim_region(region_id),
+    date_id         INTEGER NOT NULL REFERENCES dim_date(date_id),
+    next_date       DATE NOT NULL,
+    next_season     TEXT NOT NULL,
+    target_next     SMALLINT NOT NULL,
+    prob_lr         REAL NOT NULL,
+    pred_lr_050     SMALLINT NOT NULL,
+    pred_lr_fn3     SMALLINT NOT NULL,
+    prob_rf         REAL NOT NULL,
+    pred_rf_050     SMALLINT NOT NULL,
+    pred_rf_fn3     SMALLINT NOT NULL,
+    PRIMARY KEY (region_id, date_id)
+);
+
 CREATE INDEX IF NOT EXISTS idx_weather_hourly_date ON fact_weather_hourly(date_id);
 CREATE INDEX IF NOT EXISTS idx_irrigation_daily_date ON fact_irrigation_daily(date_id);
+CREATE INDEX IF NOT EXISTS idx_ml_pred_date ON fact_ml_predictions(date_id);
