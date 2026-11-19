@@ -3,9 +3,8 @@
 .env.*
 !.env.example
 
-# Raw & generated data (reproducible via etl_fetch.py)
+# Raw data (reproducible via etl_fetch.py)
 data/raw/*.csv
-data/processed/*.csv
 
 # Python
 __pycache__/
