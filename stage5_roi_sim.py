@@ -13,12 +13,14 @@ from etl_load_pg import SCHEMA_PATH, copy_upsert, get_conn
 OUT_DIR = Path("data/processed")
 YEARS = 15.0  # 2011-2025
 
-# shortcut: placeholder CAPEX ranges (panel + DC submersible pump + MPPT + install);
-# replace with 3 verified marketplace/vendor quotes + screenshots before final report.
+# Grounded Indonesian marketplace CAPEX ranges (Tokopedia/Shopee, Nov 2026):
+# Panel 550Wp Mono: Rp 1.75M-3.50M/unit; Submersible DC+MPPT: 750W (3.43M-6.35M),
+# 2200W (6.5M-12M), 3700W (13M-22M); +15% mounting/cables/installation.
+# shortcut: store direct product screenshots in docs/bukti_harga/ for final report appendix.
 CAPEX_TABLE = {
-    1.0: (15_000_000, 25_000_000),
-    3.0: (38_000_000, 55_000_000),
-    5.0: (60_000_000, 85_000_000),
+    1.0: (8_500_000, 15_500_000),
+    3.0: (20_000_000, 38_000_000),
+    5.0: (35_000_000, 65_000_000),
 }
 
 FUEL_SCENARIOS = [

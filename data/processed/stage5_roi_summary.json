@@ -6,16 +6,16 @@
   "assumptions": {
     "capex_idr": {
       "1.0": [
-        15000000,
-        25000000
+        8500000,
+        15500000
       ],
       "3.0": [
-        38000000,
-        55000000
+        20000000,
+        38000000
       ],
       "5.0": [
-        60000000,
-        85000000
+        35000000,
+        65000000
       ]
     },
     "annual_opex_pct": 0.02,
@@ -29,116 +29,116 @@
     {
       "kabupaten": "Gunungkidul",
       "solar_coverage_pct": 48.7,
-      "bep_low_years": 2.09,
-      "bep_high_years": 3.01,
-      "roi_10yr_low_pct": 379.6
+      "bep_low_years": 1.2,
+      "bep_high_years": 2.27,
+      "roi_10yr_low_pct": 736.5
     },
     {
       "kabupaten": "Klaten",
       "solar_coverage_pct": 48.04,
-      "bep_low_years": 2.14,
-      "bep_high_years": 3.08,
-      "roi_10yr_low_pct": 368.3
+      "bep_low_years": 1.22,
+      "bep_high_years": 2.32,
+      "roi_10yr_low_pct": 717.1
     },
     {
       "kabupaten": "Bantul",
       "solar_coverage_pct": 48.39,
-      "bep_low_years": 2.25,
-      "bep_high_years": 3.25,
-      "roi_10yr_low_pct": 344.1
+      "bep_low_years": 1.29,
+      "bep_high_years": 2.45,
+      "roi_10yr_low_pct": 675.6
     },
     {
       "kabupaten": "Wonogiri",
       "solar_coverage_pct": 46.55,
-      "bep_low_years": 2.31,
-      "bep_high_years": 3.33,
-      "roi_10yr_low_pct": 333.4
+      "bep_low_years": 1.32,
+      "bep_high_years": 2.51,
+      "roi_10yr_low_pct": 657.2
     },
     {
       "kabupaten": "Kulon Progo",
       "solar_coverage_pct": 48.63,
-      "bep_low_years": 2.4,
-      "bep_high_years": 3.46,
-      "roi_10yr_low_pct": 317.4
+      "bep_low_years": 1.37,
+      "bep_high_years": 2.61,
+      "roi_10yr_low_pct": 629.8
     },
     {
       "kabupaten": "Purworejo",
       "solar_coverage_pct": 48.56,
-      "bep_low_years": 2.42,
-      "bep_high_years": 3.5,
-      "roi_10yr_low_pct": 313.3
+      "bep_low_years": 1.38,
+      "bep_high_years": 2.63,
+      "roi_10yr_low_pct": 622.9
     },
     {
       "kabupaten": "Sleman",
       "solar_coverage_pct": 48.12,
-      "bep_low_years": 2.45,
-      "bep_high_years": 3.54,
-      "roi_10yr_low_pct": 308.5
+      "bep_low_years": 1.4,
+      "bep_high_years": 2.66,
+      "roi_10yr_low_pct": 614.6
     },
     {
       "kabupaten": "Kab. Magelang",
       "solar_coverage_pct": 47.63,
-      "bep_low_years": 2.55,
-      "bep_high_years": 3.69,
-      "roi_10yr_low_pct": 292.5
+      "bep_low_years": 1.46,
+      "bep_high_years": 2.77,
+      "roi_10yr_low_pct": 587.2
     }
   ],
   "best_1kwp_indiv_biosolar_004": [
     {
       "kabupaten": "Gunungkidul",
       "solar_coverage_pct": 48.7,
-      "bep_low_years": 10.56,
-      "bep_high_years": 20.49,
-      "roi_10yr_low_pct": -5.3
+      "bep_low_years": 5.48,
+      "bep_high_years": 10.99,
+      "roi_10yr_low_pct": 82.4
     },
     {
       "kabupaten": "Klaten",
       "solar_coverage_pct": 48.04,
-      "bep_low_years": 10.86,
-      "bep_high_years": 21.16,
-      "roi_10yr_low_pct": -7.9
+      "bep_low_years": 5.62,
+      "bep_high_years": 11.3,
+      "roi_10yr_low_pct": 77.8
     },
     {
       "kabupaten": "Bantul",
       "solar_coverage_pct": 48.39,
-      "bep_low_years": 11.56,
-      "bep_high_years": 22.77,
-      "roi_10yr_low_pct": -13.5
+      "bep_low_years": 5.95,
+      "bep_high_years": 12.03,
+      "roi_10yr_low_pct": 68.0
     },
     {
       "kabupaten": "Wonogiri",
       "solar_coverage_pct": 46.55,
-      "bep_low_years": 11.9,
-      "bep_high_years": 23.56,
-      "roi_10yr_low_pct": -15.9
+      "bep_low_years": 6.11,
+      "bep_high_years": 12.39,
+      "roi_10yr_low_pct": 63.7
     },
     {
       "kabupaten": "Kulon Progo",
       "solar_coverage_pct": 48.63,
-      "bep_low_years": 12.44,
-      "bep_high_years": 24.85,
-      "roi_10yr_low_pct": -19.6
+      "bep_low_years": 6.36,
+      "bep_high_years": 12.96,
+      "roi_10yr_low_pct": 57.2
     },
     {
       "kabupaten": "Purworejo",
       "solar_coverage_pct": 48.56,
-      "bep_low_years": 12.58,
-      "bep_high_years": 25.2,
-      "roi_10yr_low_pct": -20.5
+      "bep_low_years": 6.43,
+      "bep_high_years": 13.11,
+      "roi_10yr_low_pct": 55.5
     },
     {
       "kabupaten": "Sleman",
       "solar_coverage_pct": 48.12,
-      "bep_low_years": 12.76,
-      "bep_high_years": 25.63,
-      "roi_10yr_low_pct": -21.6
+      "bep_low_years": 6.51,
+      "bep_high_years": 13.3,
+      "roi_10yr_low_pct": 53.6
     },
     {
       "kabupaten": "Kab. Magelang",
       "solar_coverage_pct": 47.63,
-      "bep_low_years": 13.39,
-      "bep_high_years": 27.16,
-      "roi_10yr_low_pct": -25.3
+      "bep_low_years": 6.8,
+      "bep_high_years": 13.96,
+      "roi_10yr_low_pct": 47.1
     }
   ]
 }
