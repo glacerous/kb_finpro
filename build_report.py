@@ -12,17 +12,10 @@ from docx.oxml.ns import nsdecls, qn
 from docx.shared import Cm, Inches, Pt, RGBColor
 
 OUT_PATH = Path("docs/Laporan_Tugas_Besar_KB.docx")
-NAVY = "1B365D"
-LIGHT_BG = "F2F5F9"
-BORDER_HEX = "CBD5E1"
+BLACK = RGBColor(0x00, 0x00, 0x00)
 
 
-def set_cell_shading(cell, fill_hex: str) -> None:
-    shading = parse_xml(f'<w:shd {nsdecls("w")} w:fill="{fill_hex}"/>')
-    cell._tc.get_or_add_tcPr().append(shading)
-
-
-def set_cell_margins(cell, top=80, bottom=80, left=110, right=110) -> None:
+def set_cell_margins(cell, top=75, bottom=75, left=100, right=100) -> None:
     tcPr = cell._tc.get_or_add_tcPr()
     tcMar = OxmlElement("w:tcMar")
     for side, val in [("top", top), ("bottom", bottom), ("left", left), ("right", right)]:
@@ -33,33 +26,30 @@ def set_cell_margins(cell, top=80, bottom=80, left=110, right=110) -> None:
     tcPr.append(tcMar)
 
 
-def set_table_borders(table, color: str = BORDER_HEX) -> None:
+def set_table_borders(table) -> None:
     tblPr = table._tbl.tblPr
     borders = parse_xml(
         f'<w:tblBorders {nsdecls("w")}>'
-        f'<w:top w:val="single" w:sz="6" w:space="0" w:color="{color}"/>'
-        f'<w:bottom w:val="single" w:sz="8" w:space="0" w:color="{NAVY}"/>'
-        f'<w:left w:val="none"/>'
-        f'<w:right w:val="none"/>'
-        f'<w:insideH w:val="single" w:sz="4" w:space="0" w:color="{color}"/>'
-        f'<w:insideV w:val="single" w:sz="4" w:space="0" w:color="{color}"/>'
+        f'<w:top w:val="single" w:sz="4" w:space="0" w:color="000000"/>'
+        f'<w:bottom w:val="single" w:sz="4" w:space="0" w:color="000000"/>'
+        f'<w:left w:val="single" w:sz="4" w:space="0" w:color="000000"/>'
+        f'<w:right w:val="single" w:sz="4" w:space="0" w:color="000000"/>'
+        f'<w:insideH w:val="single" w:sz="4" w:space="0" w:color="000000"/>'
+        f'<w:insideV w:val="single" w:sz="4" w:space="0" w:color="000000"/>'
         f"</w:tblBorders>"
     )
     tblPr.append(borders)
 
 
-def add_page_number_footer(section) -> None:
-    section.different_first_page_header_footer = True
-    footer = section.footer
-    p = footer.paragraphs[0]
-    p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-    run_pre = p.add_run("Tugas Besar Kecerdasan Bisnis — SI-C  |  Halaman ")
-    run_pre.font.name = "Times New Roman"
-    run_pre.font.size = Pt(9.5)
-    run_pre.font.color.rgb = RGBColor(0x64, 0x74, 0x8B)
-
-    fld = parse_xml(r'<w:fldSimple %s w:instr="PAGE"/>' % nsdecls("w"))
-    p._p.append(fld)
+def clean_text(text: str) -> str:
+    return (
+        text.replace("\u2014", " - ")
+        .replace("\u2013", "-")
+        .replace("\u201c", '"')
+        .replace("\u201d", '"')
+        .replace("\u2018", "'")
+        .replace("\u2019", "'")
+    )
 
 
 def add_p(doc: Document, text: str, bold_prefix: str | None = None, space_after: float = 6.0) -> None:
@@ -69,13 +59,15 @@ def add_p(doc: Document, text: str, bold_prefix: str | None = None, space_after:
     p.paragraph_format.space_before = Pt(0)
     p.paragraph_format.space_after = Pt(space_after)
     if bold_prefix:
-        r0 = p.add_run(bold_prefix)
+        r0 = p.add_run(clean_text(bold_prefix))
         r0.bold = True
         r0.font.name = "Times New Roman"
         r0.font.size = Pt(11.5)
-    r = p.add_run(text)
+        r0.font.color.rgb = BLACK
+    r = p.add_run(clean_text(text))
     r.font.name = "Times New Roman"
     r.font.size = Pt(11.5)
+    r.font.color.rgb = BLACK
 
 
 def add_bullet(doc: Document, text: str, bold_prefix: str | None = None) -> None:
@@ -85,19 +77,21 @@ def add_bullet(doc: Document, text: str, bold_prefix: str | None = None) -> None
     p.paragraph_format.space_before = Pt(0)
     p.paragraph_format.space_after = Pt(4)
     if bold_prefix:
-        r0 = p.add_run(bold_prefix)
+        r0 = p.add_run(clean_text(bold_prefix))
         r0.bold = True
         r0.font.name = "Times New Roman"
         r0.font.size = Pt(11.5)
-    r = p.add_run(text)
+        r0.font.color.rgb = BLACK
+    r = p.add_run(clean_text(text))
     r.font.name = "Times New Roman"
     r.font.size = Pt(11.5)
+    r.font.color.rgb = BLACK
 
 
 def add_chapter(doc: Document, title: str, page_break: bool = True) -> None:
     if page_break:
         doc.add_page_break()
-    h = doc.add_heading(title, level=1)
+    h = doc.add_heading(clean_text(title), level=1)
     h.alignment = WD_ALIGN_PARAGRAPH.CENTER
     h.paragraph_format.space_before = Pt(4)
     h.paragraph_format.space_after = Pt(12)
@@ -105,11 +99,11 @@ def add_chapter(doc: Document, title: str, page_break: bool = True) -> None:
         run.font.name = "Times New Roman"
         run.font.size = Pt(14)
         run.font.bold = True
-        run.font.color.rgb = RGBColor(0x1B, 0x36, 0x5D)
+        run.font.color.rgb = BLACK
 
 
 def add_sub(doc: Document, title: str) -> None:
-    h = doc.add_heading(title, level=2)
+    h = doc.add_heading(clean_text(title), level=2)
     h.paragraph_format.space_before = Pt(10)
     h.paragraph_format.space_after = Pt(5)
     h.paragraph_format.keep_with_next = True
@@ -117,7 +111,7 @@ def add_sub(doc: Document, title: str) -> None:
         run.font.name = "Times New Roman"
         run.font.size = Pt(12)
         run.font.bold = True
-        run.font.color.rgb = RGBColor(0x1B, 0x36, 0x5D)
+        run.font.color.rgb = BLACK
 
 
 def add_table(doc: Document, headers: list[str], rows: list[list[str]], col_widths: list[float] | None = None) -> None:
@@ -125,24 +119,22 @@ def add_table(doc: Document, headers: list[str], rows: list[list[str]], col_widt
     tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
     set_table_borders(tbl)
 
-    # Repeat header row across page breaks
     trPr = tbl.rows[0]._tr.get_or_add_trPr()
     trPr.append(parse_xml(f'<w:tblHeader {nsdecls("w")}/>'))
 
     for j, h_text in enumerate(headers):
         cell = tbl.rows[0].cells[j]
-        set_cell_shading(cell, NAVY)
-        set_cell_margins(cell, top=90, bottom=90, left=90, right=90)
+        set_cell_margins(cell, top=80, bottom=80, left=85, right=85)
         cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
         p = cell.paragraphs[0]
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
         p.paragraph_format.space_before = Pt(0)
         p.paragraph_format.space_after = Pt(0)
-        r = p.add_run(h_text)
+        r = p.add_run(clean_text(h_text))
         r.bold = True
         r.font.name = "Times New Roman"
         r.font.size = Pt(10)
-        r.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+        r.font.color.rgb = BLACK
 
     for i, row_vals in enumerate(rows):
         row = tbl.rows[i + 1]
@@ -150,18 +142,17 @@ def add_table(doc: Document, headers: list[str], rows: list[list[str]], col_widt
         trPr.append(parse_xml(f'<w:cantSplit {nsdecls("w")}/>'))
         for j, val in enumerate(row_vals):
             cell = row.cells[j]
-            if i % 2 == 1:
-                set_cell_shading(cell, LIGHT_BG)
-            set_cell_margins(cell, top=65, bottom=65, left=90, right=90)
+            set_cell_margins(cell, top=60, bottom=60, left=85, right=85)
             cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
             p = cell.paragraphs[0]
             p.alignment = WD_ALIGN_PARAGRAPH.LEFT if j == 0 else WD_ALIGN_PARAGRAPH.CENTER
             p.paragraph_format.space_before = Pt(0)
             p.paragraph_format.space_after = Pt(0)
             p.paragraph_format.line_spacing = 1.15
-            r = p.add_run(val)
+            r = p.add_run(clean_text(val))
             r.font.name = "Times New Roman"
             r.font.size = Pt(9.5)
+            r.font.color.rgb = BLACK
 
     if col_widths:
         for row in tbl.rows:
@@ -177,17 +168,17 @@ def add_code_box(doc: Document, code: str) -> None:
     tbl = doc.add_table(rows=1, cols=1)
     tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
     cell = tbl.rows[0].cells[0]
-    set_cell_shading(cell, "F8FAFC")
-    set_cell_margins(cell, top=100, bottom=100, left=140, right=140)
-    set_table_borders(tbl, color="94A3B8")
+    set_cell_margins(cell, top=90, bottom=90, left=130, right=130)
+    set_table_borders(tbl)
     p = cell.paragraphs[0]
     p.alignment = WD_ALIGN_PARAGRAPH.LEFT
     p.paragraph_format.line_spacing = 1.15
     p.paragraph_format.space_before = Pt(0)
     p.paragraph_format.space_after = Pt(0)
-    r = p.add_run(code.strip())
+    r = p.add_run(clean_text(code.strip()))
     r.font.name = "Consolas"
     r.font.size = Pt(9)
+    r.font.color.rgb = BLACK
     sp = doc.add_paragraph()
     sp.paragraph_format.space_after = Pt(4)
 
@@ -204,11 +195,11 @@ def add_figure(doc: Document, img_path: str, caption: str, width_cm: float = 14.
     p_cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
     p_cap.paragraph_format.space_before = Pt(0)
     p_cap.paragraph_format.space_after = Pt(8)
-    r = p_cap.add_run(caption)
+    r = p_cap.add_run(clean_text(caption))
     r.italic = True
     r.font.name = "Times New Roman"
     r.font.size = Pt(9.5)
-    r.font.color.rgb = RGBColor(0x47, 0x55, 0x69)
+    r.font.color.rgb = BLACK
 
 
 def build_doc() -> None:
@@ -222,12 +213,12 @@ def build_doc() -> None:
     sec.bottom_margin = Cm(2.8)
     sec.left_margin = Cm(3.2)
     sec.right_margin = Cm(2.6)
-    add_page_number_footer(sec)
 
     # Normal style defaults
     normal = doc.styles["Normal"]
     normal.font.name = "Times New Roman"
     normal.font.size = Pt(11.5)
+    normal.font.color.rgb = BLACK
 
     # ================= COVER PAGE =================
     p = doc.add_paragraph()
@@ -237,7 +228,7 @@ def build_doc() -> None:
     r = p.add_run("TUGAS BESAR KECERDASAN BISNIS")
     r.bold = True
     r.font.size = Pt(16)
-    r.font.color.rgb = RGBColor(0x1B, 0x36, 0x5D)
+    r.font.color.rgb = BLACK
 
     p = doc.add_paragraph()
     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -290,11 +281,12 @@ def build_doc() -> None:
         "PROGRAM STUDI SISTEM INFORMASI\n"
         "JURUSAN TEKNIK INFORMATIKA\n"
         "FAKULTAS TEKNIK INDUSTRI\n"
-        "UNIVERSITAS PEMBANGUNAN NASIONAL “VETERAN” YOGYAKARTA\n"
+        'UNIVERSITAS PEMBANGUNAN NASIONAL "VETERAN" YOGYAKARTA\n'
         "2026"
     )
     r.bold = True
     r.font.size = Pt(12)
+    r.font.color.rgb = BLACK
 
     # ================= DAFTAR ISI =================
     add_chapter(doc, "DAFTAR ISI", page_break=True)
@@ -313,7 +305,7 @@ def build_doc() -> None:
         ("    2.5 Teknik Analisis Statistik Inferensial & Machine Learning H+1 Anti-Leakage", False),
         ("    2.6 Kerangka Evaluasi Tekno-Ekonomi & Desain Visualisasi Power BI", False),
         ("BAB III: PEMBAHASAN", True),
-        ("    3.1 Profil Agroklimat & Wilayah Studi (8 Kabupaten DIY–Jateng)", False),
+        ("    3.1 Profil Agroklimat & Wilayah Studi (8 Kabupaten DIY-Jateng)", False),
         ("    3.2 Hasil Implementasi ETL & Validasi Silang Data Warehouse", False),
         ("    3.3 Hasil Analisis Statistik Eksploratif & Inferensial", False),
         ("    3.4 Evaluasi Kinerja Model Machine Learning H+1 & Optimasi Threshold", False),
@@ -329,19 +321,11 @@ def build_doc() -> None:
         tp = doc.add_paragraph()
         tp.paragraph_format.space_before = Pt(3 if is_bold else 0)
         tp.paragraph_format.space_after = Pt(2)
-        tr = tp.add_run(label)
+        tr = tp.add_run(clean_text(label))
         tr.bold = is_bold
         tr.font.name = "Times New Roman"
         tr.font.size = Pt(11)
-    p_note = doc.add_paragraph()
-    p_note.paragraph_format.space_before = Pt(8)
-    rn = p_note.add_run(
-        "Catatan: Nomor halaman otomatis tampil di pojok kanan bawah setiap halaman. "
-        "Di Microsoft Word, Daftar Isi otomatis juga dapat diperbarui via References -> Table of Contents."
-    )
-    rn.italic = True
-    rn.font.size = Pt(9.5)
-    rn.font.color.rgb = RGBColor(0x64, 0x74, 0x8B)
+        tr.font.color.rgb = BLACK
 
     # ================= BAB I =================
     add_chapter(doc, "BAB I: PENDAHULUAN")
@@ -764,9 +748,10 @@ def build_doc() -> None:
         rp.paragraph_format.first_line_indent = Cm(-1.0)
         rp.paragraph_format.line_spacing = 1.2
         rp.paragraph_format.space_after = Pt(5)
-        rr = rp.add_run(ref)
+        rr = rp.add_run(clean_text(ref))
         rr.font.name = "Times New Roman"
         rr.font.size = Pt(10.5)
+        rr.font.color.rgb = BLACK
 
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     doc.save(OUT_PATH)
