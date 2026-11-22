@@ -18,5 +18,6 @@ venv/
 Thumbs.db
 .vscode/
 
-# Local compiled reports (generated via build_report.py)
+# Local compiled reports & slides (generated via build_report.py / build_slides.py)
 docs/*.docx
+docs/*.pptx
