@@ -149,29 +149,60 @@ def build_deck() -> None:
     prs.slide_width = Inches(13.333)
     prs.slide_height = Inches(7.5)
 
-    # ---------- SLIDE 1: CLEAN COVER ----------
+    # ---------- SLIDE 1: UPNVY ARCHITECTURAL COVER (UGM-STYLE) ----------
     s1 = prs.slides.add_slide(prs.slide_layouts[6])
     set_bg(s1, WHITE)
+    # Full-bleed 16:9 UPNVY architectural sketch fading to white on the right
+    s1.shapes.add_picture("docs/screenshots/upnvy_building_sketch.jpg", Inches(0), Inches(0), width=Inches(13.333), height=Inches(7.5))
 
-    add_text(s1, 0.9, 1.15, 11.2, 0.35, "TUGAS BESAR KECERDASAN BISNIS  |  KELAS SI-C", size=12, bold=True, color=FOREST)
+    # Far-right slim vertical 2-tone bar (gold top, navy bottom — UGM reference style)
+    GOLD = RGBColor(0xF5, 0xB8, 0x00)
+    bar_top = s1.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(13.11), Inches(0), Inches(0.223), Inches(4.15))
+    bar_top.fill.solid()
+    bar_top.fill.fore_color.rgb = GOLD
+    bar_top.line.fill.background()
+    bar_bot = s1.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(13.11), Inches(4.15), Inches(0.223), Inches(3.35))
+    bar_bot.fill.solid()
+    bar_bot.fill.fore_color.rgb = FOREST
+    bar_bot.line.fill.background()
+
+    # Top-left university identity
     add_text(
-        s1, 0.9, 1.65, 11.4, 2.2,
-        "Ganti Pompa Diesel ke Tenaga Surya:\nUntung atau Rugi bagi Petani Padi?",
-        size=40, bold=True, color=INK,
+        s1, 0.55, 0.45, 5.2, 0.75,
+        'UNIVERSITAS PEMBANGUNAN NASIONAL\n"VETERAN" YOGYAKARTA',
+        size=13.5, bold=True, color=FOREST,
+    )
+
+    # Right-side Title Case headline, gold short bar, subtitle & team
+    add_text(
+        s1, 6.85, 1.75, 5.85, 2.0,
+        "Prediksi Kebutuhan Irigasi Harian\n& Kelayakan ROI Pompa Air\nTenaga Surya (8 Kabupaten)",
+        size=28, bold=True, color=FOREST,
+    )
+    add_line(s1, 6.85, 3.92, 0.85, color=GOLD, thickness=3.0)
+    add_text(
+        s1, 6.85, 4.18, 5.85, 0.75,
+        "Tugas Besar Kecerdasan Bisnis (Kelas SI-C) - Studi Petani Padi\ndi DIY dan Jawa Tengah Selatan (2011-2025)",
+        size=12.5, color=MUTED,
     )
     add_text(
-        s1, 0.9, 3.6, 11.0, 0.85,
-        "Prediksi Kebutuhan Irigasi Harian & Analisis Kelayakan ROI di 8 Kabupaten DIY-Jateng (2011-2025)",
-        size=18, color=MUTED,
+        s1, 6.85, 5.0, 5.85, 1.25,
+        "Muhammad Barkah Ramadhan (124240004)\n"
+        "Azzaky Raihan Ramdhani (124240018)  |  Syahrul Alfiansyah (124240005)\n"
+        "Muhammad Ariel Saputra (124240010)  |  Ahmad Ridwan Alhadi (124240027)",
+        size=10.5, color=INK,
     )
-    add_line(s1, 0.9, 4.7, 11.4, color=RULE, thickness=0.75)
-    add_text(
-        s1, 0.9, 5.0, 11.4, 1.1,
-        "Muhammad Barkah Ramadhan (124240004)  |  Azzaky Raihan Ramdhani (124240018)\n"
-        "Syahrul Alfiansyah (124240005)  |  Muhammad Ariel Saputra (124240010)  |  Ahmad Ridwan Alhadi (124240027)",
-        size=13, color=INK,
+
+    # Bottom-left domain & bottom-right UPNVY motto
+    add_text(s1, 0.55, 6.85, 3.0, 0.35, "u p n y k . a c . i d", size=11, bold=True, color=FOREST)
+    tb_m = add_text(
+        s1, 8.6, 6.62, 4.15, 0.65,
+        "Widya Mwat Yasa\nProgram Studi Sistem Informasi, 2026",
+        size=11.5, bold=True, color=FOREST, align=PP_ALIGN.RIGHT,
     )
-    add_text(s1, 0.9, 6.45, 11.4, 0.4, 'Program Studi Sistem Informasi, UPN "Veteran" Yogyakarta  |  November 2026', size=11.5, color=MUTED)
+    for p in tb_m.text_frame.paragraphs:
+        for r in p.runs:
+            r.font.italic = True
     s1.notes_slide.notes_text_frame.text = (
         "Selamat pagi/siang Bapak/Ibu dosen dan teman-teman. Kami dari kelas SI-C akan mempresentasikan "
         "proyek Kecerdasan Bisnis tentang kelayakan ganti pompa diesel ke pompa air tenaga surya untuk "
