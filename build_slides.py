@@ -16,14 +16,14 @@ from pptx.util import Inches, Pt
 
 OUT_PATH = Path("docs/Presentasi_Tugas_Besar_KB.pptx")
 
-# Editorial Agritech + Solar Palette (no generic corporate navy)
-BG_CREAM = RGBColor(0xFA, 0xFA, 0xF7)
-INK = RGBColor(0x18, 0x18, 0x1B)       # near-black charcoal
-MUTED = RGBColor(0x52, 0x52, 0x5B)     # warm grey
-RULE = RGBColor(0xD4, 0xD4, 0xD8)      # subtle hairline
-FOREST = RGBColor(0x14, 0x53, 0x2D)    # deep green (agriculture)
-FOREST_LT = RGBColor(0xEC, 0xFD, 0xF5) # soft mint highlight
-AMBER = RGBColor(0xB4, 0x53, 0x09)     # warm solar amber
+# Clean Minimal Palette (pure white canvas + initial navy blue)
+BG_CREAM = RGBColor(0xFF, 0xFF, 0xFF)
+INK = RGBColor(0x11, 0x18, 0x27)
+MUTED = RGBColor(0x4B, 0x55, 0x63)
+RULE = RGBColor(0xE5, 0xE7, 0xEB)
+FOREST = RGBColor(0x1B, 0x36, 0x5D)    # initial navy blue
+FOREST_LT = RGBColor(0xEF, 0xF6, 0xFF) # soft blue highlight
+AMBER = RGBColor(0x1B, 0x36, 0x5D)     # unified single blue accent
 WHITE = RGBColor(0xFF, 0xFF, 0xFF)
 FONT = "Segoe UI"
 
@@ -35,7 +35,7 @@ def set_bg(slide, color=BG_CREAM) -> None:
     bg.line.fill.background()
 
 
-def add_line(slide, left, top, width, color=RULE, thickness=1.0) -> None:
+def add_line(slide, left, top, width, color=RULE, thickness=0.75) -> None:
     line = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(left), Inches(top), Inches(width), Pt(thickness))
     line.fill.solid()
     line.fill.fore_color.rgb = color
@@ -61,15 +61,12 @@ def add_text(slide, left, top, width, height, text: str, size=14, bold=False, co
 
 def new_slide(prs: Presentation, num: int, kicker: str, headline: str, notes: str = ""):
     slide = prs.slides.add_slide(prs.slide_layouts[6])
-    set_bg(slide, BG_CREAM)
+    set_bg(slide, WHITE)
 
-    # Subtle top-left kicker + slide number top-right
-    add_text(slide, 0.7, 0.38, 8.0, 0.3, f"{num:02d}  /  {kicker.upper()}", size=10, bold=True, color=FOREST)
-    add_text(slide, 11.4, 0.38, 1.2, 0.3, f"{num:02d} / 10", size=10, bold=False, color=MUTED, align=PP_ALIGN.RIGHT)
-
-    # Action takeaway headline
-    add_text(slide, 0.7, 0.72, 11.9, 0.8, headline, size=24, bold=True, color=INK)
-    add_line(slide, 0.7, 1.56, 11.9, color=RULE, thickness=1.0)
+    add_text(slide, 0.7, 0.4, 8.0, 0.3, kicker.upper(), size=10, bold=True, color=FOREST)
+    add_text(slide, 11.4, 0.4, 1.2, 0.3, f"{num} / 10", size=10, bold=False, color=MUTED, align=PP_ALIGN.RIGHT)
+    add_text(slide, 0.7, 0.74, 11.9, 0.78, headline, size=23, bold=True, color=INK)
+    add_line(slide, 0.7, 1.54, 11.9, color=RULE, thickness=0.75)
 
     if notes:
         slide.notes_slide.notes_text_frame.text = notes.strip()
@@ -77,10 +74,9 @@ def new_slide(prs: Presentation, num: int, kicker: str, headline: str, notes: st
 
 
 def add_stat_block(slide, left, top, width, number: str, label: str, detail: str, accent=FOREST):
-    add_line(slide, left, top, 0.55, color=accent, thickness=3.0)
-    add_text(slide, left, top + 0.14, width, 0.65, number, size=34, bold=True, color=INK)
-    add_text(slide, left, top + 0.82, width, 0.32, label, size=13, bold=True, color=accent)
-    add_text(slide, left, top + 1.12, width, 0.55, detail, size=11.5, color=MUTED)
+    add_text(slide, left, top, width, 0.65, number, size=34, bold=True, color=accent)
+    add_text(slide, left, top + 0.68, width, 0.32, label, size=13, bold=True, color=INK)
+    add_text(slide, left, top + 0.98, width, 0.55, detail, size=11.5, color=MUTED)
 
 
 def add_clean_list(slide, items: list[tuple[str, str]], left, top, width, height, size=13.5, gap=10):
@@ -153,34 +149,29 @@ def build_deck() -> None:
     prs.slide_width = Inches(13.333)
     prs.slide_height = Inches(7.5)
 
-    # ---------- SLIDE 1: EDITORIAL COVER ----------
+    # ---------- SLIDE 1: CLEAN COVER ----------
     s1 = prs.slides.add_slide(prs.slide_layouts[6])
-    set_bg(s1, BG_CREAM)
-    # Left vertical forest stripe
-    stripe = s1.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0), Inches(0), Inches(0.45), Inches(7.5))
-    stripe.fill.solid()
-    stripe.fill.fore_color.rgb = FOREST
-    stripe.line.fill.background()
+    set_bg(s1, WHITE)
 
-    add_text(s1, 1.1, 1.1, 10.5, 0.35, "TUGAS BESAR KECERDASAN BISNIS  |  KELAS SI-C", size=12, bold=True, color=FOREST)
+    add_text(s1, 0.9, 1.15, 11.2, 0.35, "TUGAS BESAR KECERDASAN BISNIS  |  KELAS SI-C", size=12, bold=True, color=FOREST)
     add_text(
-        s1, 1.1, 1.65, 11.2, 2.3,
+        s1, 0.9, 1.65, 11.4, 2.2,
         "Ganti Pompa Diesel ke Tenaga Surya:\nUntung atau Rugi bagi Petani Padi?",
         size=40, bold=True, color=INK,
     )
     add_text(
-        s1, 1.1, 3.65, 10.5, 0.85,
+        s1, 0.9, 3.6, 11.0, 0.85,
         "Prediksi Kebutuhan Irigasi Harian & Analisis Kelayakan ROI di 8 Kabupaten DIY-Jateng (2011-2025)",
         size=18, color=MUTED,
     )
-    add_line(s1, 1.1, 4.75, 11.2, color=RULE, thickness=1.0)
+    add_line(s1, 0.9, 4.7, 11.4, color=RULE, thickness=0.75)
     add_text(
-        s1, 1.1, 5.05, 11.2, 1.1,
+        s1, 0.9, 5.0, 11.4, 1.1,
         "Muhammad Barkah Ramadhan (124240004)  |  Azzaky Raihan Ramdhani (124240018)\n"
         "Syahrul Alfiansyah (124240005)  |  Muhammad Ariel Saputra (124240010)  |  Ahmad Ridwan Alhadi (124240027)",
         size=13, color=INK,
     )
-    add_text(s1, 1.1, 6.45, 11.2, 0.4, 'Program Studi Sistem Informasi, UPN "Veteran" Yogyakarta  |  November 2026', size=11.5, color=MUTED)
+    add_text(s1, 0.9, 6.45, 11.4, 0.4, 'Program Studi Sistem Informasi, UPN "Veteran" Yogyakarta  |  November 2026', size=11.5, color=MUTED)
     s1.notes_slide.notes_text_frame.text = (
         "Selamat pagi/siang Bapak/Ibu dosen dan teman-teman. Kami dari kelas SI-C akan mempresentasikan "
         "proyek Kecerdasan Bisnis tentang kelayakan ganti pompa diesel ke pompa air tenaga surya untuk "
@@ -234,21 +225,11 @@ def build_deck() -> None:
     ]
     for i, (num, title, tool, desc) in enumerate(steps):
         x = 0.7 + i * 2.42
-        card = s3.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(x), Inches(2.15), Inches(2.22), Inches(3.85))
-        card.fill.solid()
-        card.fill.fore_color.rgb = WHITE
-        card.line.color.rgb = RULE
-
-        top_bar = s3.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(x), Inches(2.15), Inches(2.22), Inches(0.08))
-        top_bar.fill.solid()
-        top_bar.fill.fore_color.rgb = FOREST if i < 4 else AMBER
-        top_bar.line.fill.background()
-
-        add_text(s3, x + 0.18, 2.4, 1.85, 0.4, num, size=22, bold=True, color=FOREST if i < 4 else AMBER)
-        add_text(s3, x + 0.18, 2.9, 1.85, 0.35, title, size=14, bold=True, color=INK)
-        add_text(s3, x + 0.18, 3.25, 1.85, 0.3, tool, size=11, bold=True, color=MUTED)
-        add_line(s3, x + 0.18, 3.65, 1.85, color=RULE, thickness=0.75)
-        add_text(s3, x + 0.18, 3.82, 1.85, 2.0, desc, size=11.5, color=MUTED)
+        add_text(s3, x, 2.2, 2.15, 0.4, num, size=24, bold=True, color=FOREST)
+        add_text(s3, x, 2.75, 2.15, 0.35, title, size=14, bold=True, color=INK)
+        add_text(s3, x, 3.1, 2.15, 0.3, tool, size=11, bold=True, color=MUTED)
+        add_line(s3, x, 3.5, 2.1, color=RULE, thickness=0.75)
+        add_text(s3, x, 3.7, 2.15, 2.1, desc, size=11.5, color=MUTED)
 
     add_text(s3, 0.7, 6.35, 11.9, 0.5, "Rumus inti padi sawah:  NFR = max(0,  Kc * ET0 + P + WLR - 0.8 * Rain)  +  olah lahan 250 mm/musim di simulasi ROI.", size=12, bold=True, color=INK)
 
@@ -342,12 +323,9 @@ def build_deck() -> None:
             "pengambil keputusan memahami asumsi di balik angka BEP."
         ),
     )
-    # Left panel: Governance
-    p_left = s8.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0.7), Inches(1.9), Inches(5.75), Inches(4.8))
-    p_left.fill.solid()
-    p_left.fill.fore_color.rgb = WHITE
-    p_left.line.color.rgb = RULE
-    add_text(s8, 1.0, 2.15, 5.1, 0.35, "TATA KELOLA & MODEL CARD", size=12, bold=True, color=FOREST)
+    # Left column: Governance (no box clutter)
+    add_text(s8, 0.7, 2.0, 5.6, 0.35, "TATA KELOLA & MODEL CARD", size=12, bold=True, color=FOREST)
+    add_line(s8, 0.7, 2.4, 5.5, color=RULE, thickness=0.75)
     add_clean_list(
         s8,
         [
@@ -356,15 +334,12 @@ def build_deck() -> None:
             ("Out-of-Scope:", "Bukan otomasi saklar tanpa manusia dan bukan untuk komoditas non-padi."),
             ("Fairness:", "Dilatih pada data iklim wilayah tanpa variabel status kepemilikan lahan."),
         ],
-        left=1.0, top=2.65, width=5.15, height=3.8, size=13, gap=12,
+        left=0.7, top=2.62, width=5.6, height=4.0, size=13, gap=13,
     )
 
-    # Right panel: Limitations
-    p_right = s8.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(6.85), Inches(1.9), Inches(5.75), Inches(4.8))
-    p_right.fill.solid()
-    p_right.fill.fore_color.rgb = WHITE
-    p_right.line.color.rgb = RULE
-    add_text(s8, 7.15, 2.15, 5.1, 0.35, "4 BATASAN YANG DIAKUI TERBUKA", size=12, bold=True, color=AMBER)
+    # Right column: Limitations
+    add_text(s8, 6.9, 2.0, 5.6, 0.35, "4 BATASAN YANG DIAKUI TERBUKA", size=12, bold=True, color=FOREST)
+    add_line(s8, 6.9, 2.4, 5.6, color=RULE, thickness=0.75)
     add_clean_list(
         s8,
         [
@@ -373,7 +348,7 @@ def build_deck() -> None:
             ("3. Ekstrapolasi Pompa:", "Kurva debit dari 1 studi Gowa (cut-in 30 W/m2) diskalakan ke 3 & 5 kWp."),
             ("4. Umur Motor Pompa:", "Biaya ganti motor DC (tahun ke-5-7) belum dimodelkan dalam arus kas."),
         ],
-        left=7.15, top=2.65, width=5.15, height=3.8, size=13, gap=12,
+        left=6.9, top=2.62, width=5.6, height=4.0, size=13, gap=13,
     )
 
     # ---------- SLIDE 9: RECOMMENDATION & ROI ----------
@@ -411,18 +386,14 @@ def build_deck() -> None:
 
     # ---------- SLIDE 10: CLOSING ----------
     s10 = prs.slides.add_slide(prs.slide_layouts[6])
-    set_bg(s10, BG_CREAM)
-    stripe10 = s10.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0), Inches(0), Inches(0.45), Inches(7.5))
-    stripe10.fill.solid()
-    stripe10.fill.fore_color.rgb = FOREST
-    stripe10.line.fill.background()
+    set_bg(s10, WHITE)
 
-    add_text(s10, 1.1, 2.1, 11.0, 0.35, "10  /  PENUTUP", size=12, bold=True, color=FOREST)
-    add_text(s10, 1.1, 2.55, 11.0, 1.1, "Terima Kasih  |  Sesi Tanya Jawab", size=40, bold=True, color=INK)
-    add_line(s10, 1.1, 3.85, 11.0, color=RULE, thickness=1.0)
-    add_text(s10, 1.1, 4.15, 11.0, 0.4, "Repositori Kode, Data Olahan, Bukti Harga & Dashboard Power BI:", size=13, color=MUTED)
-    add_text(s10, 1.1, 4.55, 11.0, 0.45, "https://github.com/glacerous/kb_finpro", size=18, bold=True, color=FOREST)
-    add_text(s10, 1.1, 6.25, 11.0, 0.5, "Atribusi Data: Open-Meteo.com (CC BY 4.0)  |  NASA POWER Project  |  FAO-56  |  BPS DIY & Jateng", size=11, color=MUTED)
+    add_text(s10, 0.9, 2.1, 11.4, 0.35, "PENUTUP", size=12, bold=True, color=FOREST)
+    add_text(s10, 0.9, 2.55, 11.4, 1.1, "Terima Kasih  |  Sesi Tanya Jawab", size=40, bold=True, color=INK)
+    add_line(s10, 0.9, 3.85, 11.4, color=RULE, thickness=0.75)
+    add_text(s10, 0.9, 4.15, 11.4, 0.4, "Repositori Kode, Data Olahan, Bukti Harga & Dashboard Power BI:", size=13, color=MUTED)
+    add_text(s10, 0.9, 4.55, 11.4, 0.45, "https://github.com/glacerous/kb_finpro", size=18, bold=True, color=FOREST)
+    add_text(s10, 0.9, 6.25, 11.4, 0.5, "Atribusi Data: Open-Meteo.com (CC BY 4.0)  |  NASA POWER Project  |  FAO-56  |  BPS DIY & Jateng", size=11, color=MUTED)
     s10.notes_slide.notes_text_frame.text = (
         "Sekian presentasi dari kelompok kami. Seluruh kode Python, skema SQL, bukti harga Tokopedia, "
         "dan file dashboard Power BI tersedia di repositori GitHub kami. Silakan jika ada pertanyaan."
