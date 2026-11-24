@@ -209,51 +209,52 @@ def build_deck() -> None:
         "petani padi di 8 kabupaten sekitar DIY, lengkap dengan prediksi irigasi harian dan dashboard Power BI."
     )
 
-    # ---------- SLIDE 2: CONTEXT & BUSINESS QUESTION ----------
+    # ---------- SLIDE 2: CONTEXT & BUSINESS QUESTION (CLEAN 2-COLUMN) ----------
     s2 = new_slide(
         prs, 2, "Konteks & Masalah Bisnis",
-        "Produksi padi DIY turun 15%, sementara kepastian Biosolar murah hanya s.d. 31 Des 2026",
+        "Padi DIY turun 15%; jaminan Biosolar murah hanya s.d. 31 Des 2026",
         notes=(
             "Latar belakangnya berbasis data resmi: produksi padi DIY 2024 turun 14,95% (BPS), paling parah "
             "di Gunungkidul, Bantul, dan Sleman. Petani mengandalkan pompa diesel, namun kepastian harga "
             "Biosolar subsidi Rp 6.800/L baru dijamin pemerintah (ESDM & Pertamina, diberitakan ANTARA News "
             "dan Jawa Pos) sampai 31 Desember 2026. Sementara harga Dexlite per 21 November 2026 sudah "
-            "Rp 23.700/L (CNBC Indonesia), hampir 3,5 kali lipat. Ada risiko penyesuaian subsidi pasca-2026, "
-            "sehingga petani butuh hitungan ROI berbasis data sebelum beralih ke pompa surya."
+            "Rp 23.700/L (CNBC Indonesia), hampir 3,5 kali lipat. Karena itu kami menguji kelayakan pompa "
+            "surya di kedua skenario: dengan subsidi vs tanpa subsidi."
         ),
     )
-    add_stat_block(s2, 0.7, 1.85, 3.6, "-14,95%", "Produksi Padi DIY 2024", "Kontraksi terparah di Gunungkidul, Bantul, dan Sleman (BPS DIY).", accent=FOREST)
-    add_stat_block(s2, 4.85, 1.85, 3.6, "31 Des 2026", "Batas Jaminan Biosolar", "ESDM & Pertamina tahan Rp 6.800/L s.d. akhir 2026 (ANTARA / Jawa Pos).", accent=FOREST)
-    add_stat_block(s2, 9.0, 1.85, 3.6, "Rp 23.700/L", "Harga Dexlite (3,5x)", "Harga nonsubsidi SPBU per 21 Nov 2026 (CNBC Indonesia).", accent=FOREST)
 
-    add_line(s2, 0.7, 3.55, 11.9, color=RULE, thickness=0.75)
-    add_text(s2, 0.7, 3.72, 7.2, 0.3, "TIGA PERTANYAAN BISNIS UTAMA", size=10.5, bold=True, color=FOREST)
+    # Left column: 3 crisp stacked key facts (easy top-to-bottom scan)
+    facts = [
+        ("-14,95%", "Produksi Padi DIY 2024", "Kontraksi terparah di Gunungkidul, Bantul, Sleman (BPS)."),
+        ("31 Des 2026", "Batas Jaminan Biosolar", "Harga subsidi Rp 6.800/L baru dijamin hingga akhir 2026."),
+        ("Rp 23.700/L", "Harga Dexlite (3,5x)", "Tarif nonsubsidi SPBU per 21 Nov 2026 (CNBC Indonesia)."),
+    ]
+    for idx, (num, lbl, det) in enumerate(facts):
+        y = 1.95 + idx * 1.65
+        add_text(s2, 0.7, y, 2.35, 0.65, num, size=28, bold=True, color=FOREST)
+        add_text(s2, 3.15, y + 0.05, 3.15, 0.32, lbl, size=13, bold=True, color=INK)
+        add_text(s2, 3.15, y + 0.38, 3.15, 0.6, det, size=11, color=MUTED)
+        if idx < 2:
+            add_line(s2, 0.7, y + 1.28, 5.5, color=RULE, thickness=0.75)
+
+    # Right column: cropped crisp news headline proof + concise business questions
+    add_text(s2, 6.8, 1.92, 5.8, 0.3, "BUKTI KEBIJAKAN BBM", size=10, bold=True, color=FOREST)
+    crop_img = Path("docs/screenshots/news_jawapos_headline_crop.png")
+    if crop_img.exists():
+        add_framed_image(s2, str(crop_img), 6.8, 2.26, 5.8)
+    add_text(s2, 6.8, 3.62, 5.8, 0.32, "Sumber: Jawa Pos (9 Nov 2026)  |  ANTARA News  |  CNBC Indonesia", size=9.5, color=MUTED)
+
+    add_line(s2, 6.8, 4.12, 5.8, color=RULE, thickness=0.75)
+    add_text(s2, 6.8, 4.32, 5.8, 0.3, "PERTANYAAN BISNIS", size=10, bold=True, color=FOREST)
     add_clean_list(
         s2,
         [
-            ("01  ROI & Skala:", "Di kabupaten mana & kapasitas berapa (1, 3, 5 kWp) BEP tercepat? Individu (1 ha) vs Kelompok Tani (5 ha)?"),
-            ("02  Statistik:", "Apakah beda kebutuhan air antar 8 kabupaten & antar musim benar-benar signifikan?"),
-            ("03  Prediksi H+1:", "Bisakah memprediksi besok sawah butuh siram sambil menekan risiko gagal siram (FN)?"),
+            ("01  ROI & Skala:", "Kapasitas & wilayah mana yang paling cepat BEP (Individu 1 ha vs Kelompok Tani 5 ha)?"),
+            ("02  Statistik:", "Apakah beda kebutuhan air antar 8 kabupaten & antar musim signifikan?"),
+            ("03  Prediksi H+1:", "Bisakah memprediksi irigasi besok sambil menekan risiko gagal siram?"),
         ],
-        left=0.7, top=4.08, width=7.3, height=2.5, size=13, gap=10,
+        left=6.8, top=4.72, width=5.8, height=2.2, size=12.5, gap=10,
     )
-
-    # Right-side verified news proof box (auto-embeds screenshot if present)
-    news_img = Path("docs/screenshots/news_antara_biosolar_2026.png")
-    if news_img.exists():
-        add_framed_image(s2, str(news_img), 8.25, 3.72, 4.35)
-        add_text(s2, 8.25, 6.72, 4.35, 0.4, "Jawa Pos (9 Nov 2026): jaminan Biosolar hanya s.d. 31 Des 2026.", size=9.5, color=MUTED)
-    else:
-        add_text(s2, 8.25, 3.72, 4.35, 0.3, "SUMBER KEBIJAKAN BBM (2026)", size=10.5, bold=True, color=FOREST)
-        add_clean_list(
-            s2,
-            [
-                ("ANTARA News:", "Pertamina & ESDM pastikan Pertalite & Biosolar tidak naik s.d. 31 Des 2026."),
-                ("Jawa Pos:", "Pemerintah pastikan Solar subsidi tetap Rp 6.800/L hingga 31 Des 2026."),
-                ("CNBC Indonesia:", "Harga resmi Dexlite SPBU RI berlaku 21 Nov 2026: Rp 23.700/L."),
-            ],
-            left=8.25, top=4.08, width=4.35, height=2.6, size=11, gap=8,
-        )
 
     # ---------- SLIDE 3: VISUAL 5-STEP PIPELINE ----------
     s3 = new_slide(
