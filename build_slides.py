@@ -212,29 +212,48 @@ def build_deck() -> None:
     # ---------- SLIDE 2: CONTEXT & BUSINESS QUESTION ----------
     s2 = new_slide(
         prs, 2, "Konteks & Masalah Bisnis",
-        "Produksi padi DIY turun 15%, sementara biaya solar terancam naik 3,5x pasca-2026",
+        "Produksi padi DIY turun 15%, sementara kepastian Biosolar murah hanya s.d. 31 Des 2026",
         notes=(
-            "Latar belakangnya sederhana: produksi padi DIY tahun 2024 turun 14,95%, paling parah di Gunungkidul, "
-            "Bantul, dan Sleman. Petani selama ini mengandalkan pompa diesel, tapi Biosolar subsidi Rp 6.800/L "
-            "hanya dijamin sampai Desember 2026, sedangkan Dexlite Rp 23.700/L. Pompa tenaga surya bebas solar, "
-            "tapi modal awalnya besar. Jadi ada 3 pertanyaan bisnis utama yang kami jawab."
+            "Latar belakangnya berbasis data resmi: produksi padi DIY 2024 turun 14,95% (BPS), paling parah "
+            "di Gunungkidul, Bantul, dan Sleman. Petani mengandalkan pompa diesel, namun kepastian harga "
+            "Biosolar subsidi Rp 6.800/L baru dijamin pemerintah (ESDM & Pertamina, diberitakan ANTARA News "
+            "dan Jawa Pos) sampai 31 Desember 2026. Sementara harga Dexlite per 21 November 2026 sudah "
+            "Rp 23.700/L (CNBC Indonesia), hampir 3,5 kali lipat. Ada risiko penyesuaian subsidi pasca-2026, "
+            "sehingga petani butuh hitungan ROI berbasis data sebelum beralih ke pompa surya."
         ),
     )
-    add_stat_block(s2, 0.7, 1.95, 3.6, "-14,95%", "Produksi Padi DIY 2024", "Kontraksi terparah di Gunungkidul, Bantul, dan Sleman (BPS).", accent=AMBER)
-    add_stat_block(s2, 4.85, 1.95, 3.6, "3,5x", "Lonjakan Harga Solar", "Biosolar subsidi Rp 6.800 (s.d. Des 2026) vs Dexlite Rp 23.700/L.", accent=AMBER)
-    add_stat_block(s2, 9.0, 1.95, 3.6, "8 Kab.", "Cakupan 15 Tahun", "DIY & Jateng Selatan (2011-2025), 1,05 juta baris cuaca per jam.", accent=FOREST)
+    add_stat_block(s2, 0.7, 1.85, 3.6, "-14,95%", "Produksi Padi DIY 2024", "Kontraksi terparah di Gunungkidul, Bantul, dan Sleman (BPS DIY).", accent=FOREST)
+    add_stat_block(s2, 4.85, 1.85, 3.6, "31 Des 2026", "Batas Jaminan Biosolar", "ESDM & Pertamina tahan Rp 6.800/L s.d. akhir 2026 (ANTARA / Jawa Pos).", accent=FOREST)
+    add_stat_block(s2, 9.0, 1.85, 3.6, "Rp 23.700/L", "Harga Dexlite (3,5x)", "Harga nonsubsidi SPBU per 21 Nov 2026 (CNBC Indonesia).", accent=FOREST)
 
-    add_line(s2, 0.7, 3.95, 11.9, color=RULE, thickness=1.0)
-    add_text(s2, 0.7, 4.18, 11.9, 0.35, "TIGA PERTANYAAN BISNIS UTAMA", size=11, bold=True, color=FOREST)
+    add_line(s2, 0.7, 3.55, 11.9, color=RULE, thickness=0.75)
+    add_text(s2, 0.7, 3.72, 7.2, 0.3, "TIGA PERTANYAAN BISNIS UTAMA", size=10.5, bold=True, color=FOREST)
     add_clean_list(
         s2,
         [
-            ("01  Kelayakan ROI:", "Di kabupaten mana & kapasitas berapa (1, 3, 5 kWp) pompa surya paling cepat balik modal? Individu (1 ha) vs Kelompok Tani (5 ha)?"),
-            ("02  Bukti Statistik:", "Apakah beda kebutuhan air antar 8 kabupaten & antar musim benar-benar nyata secara statistik?"),
-            ("03  Prediksi H+1:", "Bisakah kita memprediksi besok sawah butuh disiram atau tidak, sambil menekan risiko gagal siram?"),
+            ("01  ROI & Skala:", "Di kabupaten mana & kapasitas berapa (1, 3, 5 kWp) BEP tercepat? Individu (1 ha) vs Kelompok Tani (5 ha)?"),
+            ("02  Statistik:", "Apakah beda kebutuhan air antar 8 kabupaten & antar musim benar-benar signifikan?"),
+            ("03  Prediksi H+1:", "Bisakah memprediksi besok sawah butuh siram sambil menekan risiko gagal siram (FN)?"),
         ],
-        left=0.7, top=4.62, width=11.9, height=2.3, size=14, gap=12,
+        left=0.7, top=4.08, width=7.3, height=2.5, size=13, gap=10,
     )
+
+    # Right-side verified news proof box (auto-embeds screenshot if present, else clean citation card)
+    news_img = Path("docs/screenshots/news_antara_biosolar_2026.png")
+    if news_img.exists():
+        add_framed_image(s2, str(news_img), 8.25, 3.75, 4.35)
+        add_text(s2, 8.25, 6.28, 4.35, 0.4, "Bukti: ANTARA News & CNBC Indonesia (Nov 2026)", size=9.5, color=MUTED)
+    else:
+        add_text(s2, 8.25, 3.72, 4.35, 0.3, "SUMBER KEBIJAKAN BBM (2026)", size=10.5, bold=True, color=FOREST)
+        add_clean_list(
+            s2,
+            [
+                ("ANTARA News:", "Pertamina & ESDM pastikan Pertalite & Biosolar tidak naik s.d. 31 Des 2026."),
+                ("Jawa Pos:", "Pemerintah pastikan Solar subsidi tetap Rp 6.800/L hingga 31 Des 2026."),
+                ("CNBC Indonesia:", "Harga resmi Dexlite SPBU RI berlaku 21 Nov 2026: Rp 23.700/L."),
+            ],
+            left=8.25, top=4.08, width=4.35, height=2.6, size=11, gap=8,
+        )
 
     # ---------- SLIDE 3: VISUAL 5-STEP PIPELINE ----------
     s3 = new_slide(
