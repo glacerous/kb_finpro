@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SOLAR-GRID DIY & Jateng — Dashboard Interaktif Pompa Irigasi Surya</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --glass-bg: rgba(24, 25, 29, 0.90);
+    --glass-border: rgba(255, 255, 255, 0.10);
+    --pill-bg: rgba(34, 36, 42, 0.92);
+    --text-main: #F4F4F5;
+    --text-muted: #A1A1AA;
+    --mint: #2DD4BF;
+    --amber: #F59E0B;
+    --rose: #F43F5E;
+    --purple: #A78BFA;
+    --font: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font); background: #E9ECEF; color: var(--text-main); overflow: hidden; height: 100vh; width: 100vw; }
+  #map { position: fixed; inset: 0; z-index: 1; background: #E9ECEF; }
+
+  /* Floating Top Bar (Foundry style) */
+  .top-bar {
+    position: fixed; top: 14px; left: 16px; right: 16px; z-index: 20;
+    display: flex; align-items: center; justify-content: space-between; pointer-events: none;
+  }
+  .top-bar > * { pointer-events: auto; }
+  .brand-pill {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--glass-bg); backdrop-filter: blur(14px);
+    border: 1px solid var(--glass-border); border-radius: 999px;
+    padding: 7px 14px; box-shadow: 0 8px 24px rgba(0,0,0,0.22);
+  }
+  .brand-logo {
+    width: 22px; height: 22px; border-radius: 6px; background: var(--mint); color: #0F172A;
+    font-weight: 800; font-size: 12px; display: grid; place-items: center;
+  }
+  .brand-title { font-weight: 700; font-size: 13.5px; letter-spacing: 0.3px; }
+  .brand-tag { font-size: 11px; color: var(--text-muted); background: rgba(255,255,255,0.08); padding: 2px 8px; border-radius: 999px; }
+
+  .nav-pills {
+    display: flex; gap: 4px; background: var(--glass-bg); backdrop-filter: blur(14px);
+    border: 1px solid var(--glass-border); border-radius: 999px; padding: 4px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.22);
+  }
+  .nav-btn {
+    border: none; background: transparent; color: var(--text-muted); font-family: var(--font);
+    font-size: 12.5px; font-weight: 600; padding: 6px 14px; border-radius: 999px; cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .nav-btn:hover { color: var(--text-main); }
+  .nav-btn.active { background: rgba(255,255,255,0.14); color: #FFFFFF; }
+
+  .meta-pill {
+    background: var(--glass-bg); backdrop-filter: blur(14px);
+    border: 1px solid var(--glass-border); border-radius: 999px;
+    padding: 7px 14px; font-size: 11.5px; color: #FDE68A; font-weight: 600;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.22);
+  }
+
+  /* Left Dark Glass Sidebar */
+  .sidebar {
+    position: fixed; top: 68px; left: 16px; bottom: 16px; width: 340px; z-index: 15;
+    background: var(--glass-bg); backdrop-filter: blur(16px);
+    border: 1px solid var(--glass-border); border-radius: 18px;
+    padding: 16px; display: flex; flex-direction: column; gap: 12px;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.28); overflow-y: auto;
+  }
+  .sidebar::-webkit-scrollbar { width: 5px; }
+  .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+  .sb-kicker { font-size: 11px; color: var(--mint); font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; }
+  .sb-desc { font-size: 12px; color: var(--text-muted); line-height: 1.45; }
+
+  .ctrl-group { display: flex; flex-direction: column; gap: 5px; }
+  .ctrl-label { font-size: 10.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+  .seg-row { display: flex; gap: 4px; background: rgba(255,255,255,0.06); padding: 3px; border-radius: 10px; }
+  .seg-btn {
+    flex: 1; border: none; background: transparent; color: var(--text-muted);
+    font-family: var(--font); font-size: 11.5px; font-weight: 600; padding: 6px 6px;
+    border-radius: 7px; cursor: pointer; transition: all 0.15s;
+  }
+  .seg-btn.active { background: #FFFFFF; color: #111827; }
+
+  .kpi-strip { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .kpi-mini {
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 12px; padding: 9px 11px;
+  }
+  .kpi-mini .k-lbl { font-size: 10.5px; color: var(--text-muted); }
+  .kpi-mini .k-val { font-size: 18px; font-weight: 700; margin-top: 2px; color: #FFFFFF; }
+  .kpi-mini .k-sub { font-size: 10px; color: var(--mint); margin-top: 1px; }
+
+  .reg-list { display: flex; flex-direction: column; gap: 7px; }
+  .reg-item {
+    background: rgba(255,255,255,0.04); border: 1px solid transparent;
+    border-radius: 11px; padding: 8px 10px; cursor: pointer; transition: all 0.15s;
+  }
+  .reg-item:hover { background: rgba(255,255,255,0.09); }
+  .reg-item.selected { border-color: var(--mint); background: rgba(45, 212, 191, 0.10); }
+  .reg-top { display: flex; justify-content: space-between; align-items: baseline; font-size: 12.5px; }
+  .reg-name { font-weight: 600; color: #FFFFFF; }
+  .reg-bep { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .reg-meta { font-size: 10.5px; color: var(--text-muted); margin: 2px 0 5px; display: flex; justify-content: space-between; }
+  .bar-track { height: 5px; background: rgba(255,255,255,0.10); border-radius: 999px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 999px; transition: width 0.25s ease, background 0.25s ease; }
+
+  .legend-row { display: flex; gap: 12px; font-size: 10.5px; color: var(--text-muted); padding-top: 4px; border-top: 1px solid var(--glass-border); }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+
+  /* Bottom Fuel Price Scrubber (Foundry timeline style) */
+  .bottom-dock {
+    position: fixed; bottom: 16px; left: 372px; right: 16px; z-index: 15;
+    display: flex; flex-direction: column; gap: 8px; align-items: flex-start; pointer-events: none;
+  }
+  .bottom-dock > * { pointer-events: auto; }
+  .preset-row { display: flex; gap: 6px; }
+  .preset-pill {
+    background: var(--glass-bg); backdrop-filter: blur(14px); border: 1px solid var(--glass-border);
+    color: var(--text-muted); border-radius: 999px; padding: 5px 12px; font-size: 11.5px;
+    font-weight: 600; cursor: pointer; font-family: var(--font); transition: all 0.15s;
+  }
+  .preset-pill.active, .preset-pill:hover { color: #FFFFFF; border-color: rgba(255,255,255,0.35); }
+  .scrubber {
+    width: 100%; background: var(--glass-bg); backdrop-filter: blur(16px);
+    border: 1px solid var(--glass-border); border-radius: 14px;
+    padding: 10px 16px; display: flex; align-items: center; gap: 14px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.24);
+  }
+  .play-btn {
+    width: 32px; height: 32px; border-radius: 50%; border: none; background: #FFFFFF; color: #111827;
+    font-size: 12px; font-weight: 800; cursor: pointer; flex-shrink: 0; display: grid; place-items: center;
+  }
+  .slider-wrap { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+  .slider-top { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); }
+  .slider-top strong { color: #FFFFFF; font-size: 12.5px; }
+  input[type="range"] { width: 100%; accent-color: var(--mint); cursor: pointer; }
+
+  /* Map custom floating badges (Foundry MW-pill style) */
+  .map-badge {
+    background: rgba(17, 18, 22, 0.90); color: #FFFFFF; border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 8px; padding: 4px 8px; font-family: var(--font); font-size: 11px;
+    white-space: nowrap; box-shadow: 0 4px 12px rgba(0,0,0,0.28); text-align: center;
+  }
+  .map-badge .mb-name { font-weight: 700; display: block; font-size: 11px; }
+  .map-badge .mb-val { font-weight: 700; font-size: 11.5px; }
+
+  /* Full Overlay Views (Iklim / ML / Ringkasan) */
+  .overlay-view {
+    position: fixed; top: 68px; left: 372px; right: 16px; bottom: 16px; z-index: 16;
+    background: var(--glass-bg); backdrop-filter: blur(18px);
+    border: 1px solid var(--glass-border); border-radius: 18px;
+    padding: 20px 22px; overflow-y: auto; display: none;
+    box-shadow: 0 14px 36px rgba(0,0,0,0.32);
+  }
+  .overlay-view.open { display: block; }
+  .ov-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; border-bottom: 1px solid var(--glass-border); padding-bottom: 10px; }
+  .ov-title { font-size: 18px; font-weight: 700; }
+  .ov-sub { font-size: 12px; color: var(--text-muted); }
+  .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .chart-card {
+    background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border);
+    border-radius: 14px; padding: 14px;
+  }
+  .chart-card h4 { font-size: 13px; margin-bottom: 4px; color: #FFFFFF; }
+  .chart-card p { font-size: 11px; color: var(--text-muted); margin-bottom: 10px; }
+  .chart-box { position: relative; height: 245px; }
+
+  .data-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+  .data-table th { text-align: left; padding: 8px; color: var(--text-muted); border-bottom: 1px solid var(--glass-border); font-weight: 600; }
+  .data-table td { padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); font-variant-numeric: tabular-nums; }
+  .data-table tr.hi td { color: var(--mint); font-weight: 700; background: rgba(45,212,191,0.08); }
+  .cm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+  .cm-cell { background: rgba(255,255,255,0.05); border-radius: 10px; padding: 14px; text-align: center; }
+  .cm-cell .n { font-size: 26px; font-weight: 800; }
+  .cm-cell .l { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+</style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<!-- Top Floating Bar -->
+<div class="top-bar">
+  <div class="brand-pill">
+    <div class="brand-logo">SG</div>
+    <span class="brand-title">SOLAR-GRID</span>
+    <span class="brand-tag">DIY-JATENG · 8 Kab</span>
+  </div>
+
+  <div class="nav-pills">
+    <button class="nav-btn active" data-tab="map">Peta ROI</button>
+    <button class="nav-btn" data-tab="climate">Iklim &amp; Sinergi</button>
+    <button class="nav-btn" data-tab="ml">Prediksi ML H+1</button>
+    <button class="nav-btn" data-tab="summary">Ringkasan</button>
+  </div>
+
+  <div class="meta-pill">Data Riil 2011–2025 · 1,05 Juta Baris</div>
+</div>
+
+<!-- Left Dark Glass Sidebar -->
+<aside class="sidebar">
+  <div>
+    <div class="sb-kicker">Kelayakan Pompa Surya Padi</div>
+    <p class="sb-desc" style="margin-top:4px;">
+      Simulasi riil 15 tahun (Open-Meteo + NASA POWER + CAPEX Tokopedia Nov 2026). Klik kabupaten untuk fokus &amp; geser harga solar di bawah.
+    </p>
+  </div>
+
+  <div class="ctrl-group">
+    <span class="ctrl-label">Mode Kepemilikan Lahan</span>
+    <div class="seg-row" id="ctrl-land">
+      <button class="seg-btn active" data-val="Kelompok Tani (1 ha/kWp)">Kelompok Tani</button>
+      <button class="seg-btn" data-val="Individu (1 ha)">Individu (1 ha)</button>
+    </div>
+  </div>
+
+  <div style="display:grid; grid-template-columns: 1.25fr 1fr; gap: 8px;">
+    <div class="ctrl-group">
+      <span class="ctrl-label">Kapasitas Pompa</span>
+      <div class="seg-row" id="ctrl-cap">
+        <button class="seg-btn" data-val="1">1 kWp</button>
+        <button class="seg-btn" data-val="3">3</button>
+        <button class="seg-btn active" data-val="5">5 kWp</button>
+      </div>
+    </div>
+    <div class="ctrl-group">
+      <span class="ctrl-label">Diesel (L/m³)</span>
+      <div class="seg-row" id="ctrl-rate">
+        <button class="seg-btn active" data-val="0.04">0,04</button>
+        <button class="seg-btn" data-val="0.06">0,06</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="kpi-strip">
+    <div class="kpi-mini">
+      <div class="k-lbl">Rata-rata BEP (Low)</div>
+      <div class="k-val" id="kpi-bep">-</div>
+      <div class="k-sub" id="kpi-viable">-</div>
+    </div>
+    <div class="kpi-mini">
+      <div class="k-lbl">Cakupan Surya</div>
+      <div class="k-val" id="kpi-cov">-</div>
+      <div class="k-sub" id="kpi-save">-</div>
+    </div>
+  </div>
+
+  <div class="ctrl-label" style="margin-top:2px;">Peringkat 8 Kabupaten (Tercepat Balik Modal)</div>
+  <div class="reg-list" id="reg-list"></div>
+
+  <div class="legend-row">
+    <span><span class="dot" style="background:var(--mint)"></span>&lt; 3 thn (Sangat Layak)</span>
+    <span><span class="dot" style="background:var(--amber)"></span>3–5 thn</span>
+    <span><span class="dot" style="background:var(--rose)"></span>&gt; 5 thn</span>
+  </div>
+</aside>
+
+<!-- Bottom Fuel Price Scrubber (visible on Map tab) -->
+<div class="bottom-dock" id="bottom-dock">
+  <div class="preset-row">
+    <button class="preset-pill" data-price="6800">Biosolar Subsidi (Rp 6.800/L)</button>
+    <button class="preset-pill" data-price="15000">Transisi (Rp 15.000/L)</button>
+    <button class="preset-pill active" data-price="23700">Dexlite Non-Subsidi (Rp 23.700/L)</button>
+  </div>
+  <div class="scrubber">
+    <button class="play-btn" id="play-btn" title="Animasi kenaikan harga BBM">▶</button>
+    <div class="slider-wrap">
+      <div class="slider-top">
+        <span>Simulasi Harga Solar Real-Time (Rp 6.800 – Rp 30.000/L)</span>
+        <strong id="price-display">Rp 23.700 / liter</strong>
+      </div>
+      <input type="range" id="price-slider" min="6800" max="30000" step="100" value="23700" />
+    </div>
+  </div>
+</div>
+
+<!-- Overlay Tab: Climate & Synergy -->
+<section class="overlay-view" id="view-climate">
+  <div class="ov-header">
+    <div>
+      <div class="ov-title" id="clim-title">Iklim &amp; Sinergi Agroklimat — Gunungkidul</div>
+      <div class="ov-sub">Klik kabupaten di panel kiri untuk melihat profil iklimnya. ANOVA 8 Kab: F = <span id="st-f"></span> (p &lt; 0,001) · Welch t-test Kemarau vs Hujan: t = <span id="st-t"></span></div>
+    </div>
+  </div>
+  <div class="chart-grid">
+    <div class="chart-card">
+      <h4>Sinergi Bulanan: Kebutuhan Air (NFR) vs Radiasi Surya</h4>
+      <p>Saat kebutuhan air sawah melonjak di musim kemarau (Apr–Jun), pasokan matahari juga tinggi (Bulan 7–10 masa Bera).</p>
+      <div class="chart-box"><canvas id="chart-monthly"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h4>Tren Hari Butuh Irigasi Per Tahun (2011–2025)</h4>
+      <p>Menangkap lonjakan kekeringan pada tahun fenomena El Niño (2018, 2019, 2023).</p>
+      <div class="chart-box"><canvas id="chart-yearly"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<!-- Overlay Tab: ML H+1 -->
+<section class="overlay-view" id="view-ml">
+  <div class="ov-header">
+    <div>
+      <div class="ov-title">Model Prediktif ML H+1 (Test Out-of-Sample 2023–2025 · 5.808 Hari)</div>
+      <div class="ov-sub">Logistic Regression unggul atas baseline &amp; Random Forest; tuning FN:FP = 3:1 (t = 0,21) pangkas gagal siram 90%</div>
+    </div>
+  </div>
+  <div class="chart-grid">
+    <div class="chart-card">
+      <h4>Kalibrasi Probabilitas Bulanan (Prediksi vs Aktual)</h4>
+      <p>Rata-rata probabilitas Logistic Regression menempel erat dengan kejadian aktual sepanjang tahun.</p>
+      <div class="chart-box"><canvas id="chart-ml-cal"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h4>Confusion Matrix — Logistic Regression (t = 0,21)</h4>
+      <p>Penalti biaya 3:1 menghasilkan Recall 97,33% dan menekan gagal irigasi (FN) dari 849 ke 88 hari.</p>
+      <div class="cm-grid">
+        <div class="cm-cell"><div class="n" style="color:var(--mint)">3.209</div><div class="l">True Positive (Tepat Siram)</div></div>
+        <div class="cm-cell"><div class="n" style="color:var(--rose)">88</div><div class="l">False Negative (Gagal Siram · -90%)</div></div>
+        <div class="cm-cell"><div class="n" style="color:var(--amber)">2.227</div><div class="l">False Positive (Siaga Berlebih)</div></div>
+        <div class="cm-cell"><div class="n" style="color:var(--text-main)">284</div><div class="l">True Negative (Tepat Tidak Siram)</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="chart-card" style="margin-top:16px;">
+    <h4>Perbandingan Seluruh Model (Temporal Split Anti-Leakage)</h4>
+    <table class="data-table" id="ml-table"></table>
+  </div>
+</section>
+
+<!-- Overlay Tab: Summary -->
+<section class="overlay-view" id="view-summary">
+  <div class="ov-header">
+    <div>
+      <div class="ov-title">Ringkasan Eksekutif &amp; Sumber Data Riil</div>
+      <div class="ov-sub">Tugas Besar Kecerdasan Bisnis — Kelas SI-C, UPN "Veteran" Yogyakarta (2026)</div>
+    </div>
+  </div>
+  <div class="chart-grid">
+    <div class="chart-card">
+      <h4>2 Tuas Keputusan Bisnis Utama</h4>
+      <p style="color:var(--text-main); font-size:12.5px; line-height:1.6;">
+        <strong>1. Skala Kelompok Tani (5 kWp / 5 ha):</strong> Hindari <em>over-sizing</em> pada petani individu 1 ha (1 kWp paling efisien). Pada skema patungan 5 ha, <strong>4 kabupaten</strong> (Gunungkidul, Klaten, Bantul, Wonogiri) sudah tembus BEP <strong>&lt; 5 tahun</strong> bahkan dengan Biosolar subsidi.<br/><br/>
+        <strong>2. Risiko Pencabutan Subsidi BBM:</strong> Begitu harga solar beralih ke Dexlite (Rp 23.700/L), <strong>seluruh 8 kabupaten</strong> balik modal dalam <strong>1,20 – 2,77 tahun</strong>. Prioritas investasi #1 Gunungkidul &amp; #2 Klaten.
+      </p>
+    </div>
+    <div class="chart-card">
+      <h4>Sumber Data &amp; Atribusi Wajib</h4>
+      <p style="color:var(--text-main); font-size:12px; line-height:1.6;">
+        • <strong>Open-Meteo Archive API (CC BY 4.0):</strong> 1.051.968 baris/jam (2011–2025, 0 null).<br/>
+        • <strong>NASA POWER Project (AG Daily):</strong> 43.832 baris validasi silang (r = 0,74–0,78).<br/>
+        • <strong>CAPEX Marketplace (Tokopedia, Nov 2026):</strong> 1 kWp Rp 8,5–15,5 jt | 3 kWp Rp 20–38 jt | 5 kWp Rp 35–65 jt (+15% instalasi, OPEX 2%/thn).<br/>
+        • <strong>Standar Agronomi:</strong> FAO-56, KP-01 PUPR, kurva debit studi Gowa (Unram).
+      </p>
+    </div>
+  </div>
+</section>
+
+<script>
+const DATA = {"regions": [{"kabupaten": "Kulon Progo", "provinsi": "DI Yogyakarta", "lat": -7.8568, "lon": 110.1604, "mean_nfr": 2.635, "pct_irrig": 51.486, "mean_rad": 17.557, "solar_m3_1kwp": 39.915, "mean_rain": 10.002}, {"kabupaten": "Bantul", "provinsi": "DI Yogyakarta", "lat": -7.8881, "lon": 110.3288, "mean_nfr": 2.948, "pct_irrig": 55.008, "mean_rad": 17.578, "solar_m3_1kwp": 39.973, "mean_rain": 9.093}, {"kabupaten": "Gunungkidul", "provinsi": "DI Yogyakarta", "lat": -7.9666, "lon": 110.6025, "mean_nfr": 3.297, "pct_irrig": 60.099, "mean_rad": 17.664, "solar_m3_1kwp": 40.056, "mean_rain": 8.209}, {"kabupaten": "Sleman", "provinsi": "DI Yogyakarta", "lat": -7.716, "lon": 110.3556, "mean_nfr": 2.589, "pct_irrig": 51.486, "mean_rad": 17.133, "solar_m3_1kwp": 39.292, "mean_rain": 10.051}, {"kabupaten": "Purworejo", "provinsi": "Jawa Tengah", "lat": -7.7131, "lon": 110.0086, "mean_nfr": 2.599, "pct_irrig": 52.367, "mean_rad": 17.187, "solar_m3_1kwp": 39.379, "mean_rain": 9.99}, {"kabupaten": "Kab. Magelang", "provinsi": "Jawa Tengah", "lat": -7.5994, "lon": 110.2206, "mean_nfr": 2.461, "pct_irrig": 49.202, "mean_rad": 16.652, "solar_m3_1kwp": 38.642, "mean_rain": 10.114}, {"kabupaten": "Klaten", "provinsi": "Jawa Tengah", "lat": -7.7058, "lon": 110.6015, "mean_nfr": 3.247, "pct_irrig": 59.329, "mean_rad": 17.614, "solar_m3_1kwp": 39.905, "mean_rain": 8.218}, {"kabupaten": "Wonogiri", "provinsi": "Jawa Tengah", "lat": -7.8139, "lon": 110.9234, "mean_nfr": 3.025, "pct_irrig": 54.155, "mean_rad": 17.164, "solar_m3_1kwp": 39.295, "mean_rain": 9.12}], "roi": [{"kabupaten": "Kulon Progo", "capacity_kwp": 1.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 11384.5, "annual_solar_m3": 5536.7, "solar_coverage_pct": 48.63, "annual_diesel_saved_l": 221.5, "annual_opex_low_idr": 170000, "annual_opex_high_idr": 310000, "capex_low": 8500000, "capex_high": 15500000}, {"kabupaten": "Kulon Progo", "capacity_kwp": 1.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 11384.5, "annual_solar_m3": 5536.7, "solar_coverage_pct": 48.63, "annual_diesel_saved_l": 332.2, "annual_opex_low_idr": 170000, "annual_opex_high_idr": 310000, "capex_low": 8500000, "capex_high": 15500000}, {"kabupaten": "Kulon Progo", "capacity_kwp": 1.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 11384.5, "annual_solar_m3": 5536.7, "solar_coverage_pct": 48.63, "annual_diesel_saved_l": 221.5, "annual_opex_low_idr": 170000, "annual_opex_high_idr": 310000, "capex_low": 8500000, "capex_high": 15500000}, {"kabupaten": "Kulon Progo", "capacity_kwp": 1.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 11384.5, "annual_solar_m3": 5536.7, "solar_coverage_pct": 48.63, "annual_diesel_saved_l": 332.2, "annual_opex_low_idr": 170000, "annual_opex_high_idr": 310000, "capex_low": 8500000, "capex_high": 15500000}, {"kabupaten": "Kulon Progo", "capacity_kwp": 3.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 11384.5, "annual_solar_m3": 9421.3, "solar_coverage_pct": 82.76, "annual_diesel_saved_l": 376.9, "annual_opex_low_idr": 400000, "annual_opex_high_idr": 760000, "capex_low": 20000000, "capex_high": 38000000}, {"kabupaten": "Kulon Progo", "capacity_kwp": 3.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 11384.5, "annual_solar_m3": 9421.3, "solar_coverage_pct": 82.76, "annual_diesel_saved_l": 565.3, "annual_opex_low_idr": 400000, "annual_opex_high_idr": 760000, "capex_low": 20000000, "capex_high": 38000000}, {"kabupaten": "Kulon Progo", "capacity_kwp": 3.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 3.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 34153.6, "annual_solar_m3": 16610.0, "solar_coverage_pct": 48.63, "annual_diesel_saved_l": 664.4, "annual_opex_low_idr": 400000, "annual_opex_high_idr": 760000, "capex_low": 20000000, "capex_high": 38000000}, {"kabupaten": "Kulon Progo", "capacity_kwp": 3.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 3.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 34153.6, "annual_solar_m3": 16610.0, "solar_coverage_pct": 48.63, "annual_diesel_saved_l": 996.6, "annual_opex_low_idr": 400000, "annual_opex_high_idr": 760000, "capex_low": 20000000, "capex_high": 38000000}, {"kabupaten": "Kulon Progo", "capacity_kwp": 5.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 11384.5, "annual_solar_m3": 11232.4, "solar_coverage_pct": 98.66, "annual_diesel_saved_l": 449.3, "annual_opex_low_idr": 700000, "annual_opex_high_idr": 1300000, "capex_low": 35000000, "capex_high": 65000000}, {"kabupaten": "Kulon Progo", "capacity_kwp": 5.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 11384.5, "annual_solar_m3": 11232.4, "solar_coverage_pct": 98.66, "annual_diesel_saved_l": 673.9, "annual_opex_low_idr": 700000, "annual_opex_high_idr": 1300000, "capex_low": 35000000, "capex_high": 65000000}, {"kabupaten": "Kulon Progo", "capacity_kwp": 5.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 5.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 56922.6, "annual_solar_m3": 27683.3, "solar_coverage_pct": 48.63, "annual_diesel_saved_l": 1107.3, "annual_opex_low_idr": 700000, "annual_opex_high_idr": 1300000, "capex_low": 35000000, "capex_high": 65000000}, {"kabupaten": "Kulon Progo", "capacity_kwp": 5.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 5.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 56922.6, "annual_solar_m3": 27683.3, "solar_coverage_pct": 48.63, "annual_diesel_saved_l": 1661.0, "annual_opex_low_idr": 700000, "annual_opex_high_idr": 1300000, "capex_low": 35000000, "capex_high": 65000000}, {"kabupaten": "Bantul", "capacity_kwp": 1.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 12141.3, "annual_solar_m3": 5875.0, "solar_coverage_pct": 48.39, "annual_diesel_saved_l": 235.0, "annual_opex_low_idr": 170000, "annual_opex_high_idr": 310000, "capex_low": 8500000, "capex_high": 15500000}, {"kabupaten": "Bantul", "capacity_kwp": 1.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 12141.3, "annual_solar_m3": 5875.0, "solar_coverage_pct": 48.39, "annual_diesel_saved_l": 352.5, "annual_opex_low_idr": 170000, "annual_opex_high_idr": 310000, "capex_low": 8500000, "capex_high": 15500000}, {"kabupaten": "Bantul", "capacity_kwp": 1.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 12141.3, "annual_solar_m3": 5875.0, "solar_coverage_pct": 48.39, "annual_diesel_saved_l": 235.0, "annual_opex_low_idr": 170000, "annual_opex_high_idr": 310000, "capex_low": 8500000, "capex_high": 15500000}, {"kabupaten": "Bantul", "capacity_kwp": 1.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 12141.3, "annual_solar_m3": 5875.0, "solar_coverage_pct": 48.39, "annual_diesel_saved_l": 352.5, "annual_opex_low_idr": 170000, "annual_opex_high_idr": 310000, "capex_low": 8500000, "capex_high": 15500000}, {"kabupaten": "Bantul", "capacity_kwp": 3.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 12141.3, "annual_solar_m3": 10107.6, "solar_coverage_pct": 83.25, "annual_diesel_saved_l": 404.3, "annual_opex_low_idr": 400000, "annual_opex_high_idr": 760000, "capex_low": 20000000, "capex_high": 38000000}, {"kabupaten": "Bantul", "capacity_kwp": 3.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 12141.3, "annual_solar_m3": 10107.6, "solar_coverage_pct": 83.25, "annual_diesel_saved_l": 606.5, "annual_opex_low_idr": 400000, "annual_opex_high_idr": 760000, "capex_low": 20000000, "capex_high": 38000000}, {"kabupaten": "Bantul", "capacity_kwp": 3.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 3.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 36424.0, "annual_solar_m3": 17624.9, "solar_coverage_pct": 48.39, "annual_diesel_saved_l": 705.0, "annual_opex_low_idr": 400000, "annual_opex_high_idr": 760000, "capex_low": 20000000, "capex_high": 38000000}, {"kabupaten": "Bantul", "capacity_kwp": 3.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 3.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 36424.0, "annual_solar_m3": 17624.9, "solar_coverage_pct": 48.39, "annual_diesel_saved_l": 1057.5, "annual_opex_low_idr": 400000, "annual_opex_high_idr": 760000, "capex_low": 20000000, "capex_high": 38000000}, {"kabupaten": "Bantul", "capacity_kwp": 5.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 12141.3, "annual_solar_m3": 11981.4, "solar_coverage_pct": 98.68, "annual_diesel_saved_l": 479.3, "annual_opex_low_idr": 700000, "annual_opex_high_idr": 1300000, "capex_low": 35000000, "capex_high": 65000000}, {"kabupaten": "Bantul", "capacity_kwp": 5.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 12141.3, "annual_solar_m3": 11981.4, "solar_coverage_pct": 98.68, "annual_diesel_saved_l": 718.9, "annual_opex_low_idr": 700000, "annual_opex_high_idr": 1300000, "capex_low": 35000000, "capex_high": 65000000}, {"kabupaten": "Bantul", "capacity_kwp": 5.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 5.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 60706.7, "annual_solar_m3": 29374.8, "solar_coverage_pct": 48.39, "annual_diesel_saved_l": 1175.0, "annual_opex_low_idr": 700000, "annual_opex_high_idr": 1300000, "capex_low": 35000000, "capex_high": 65000000}, {"kabupaten": "Bantul", "capacity_kwp": 5.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 5.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 60706.7, "annual_solar_m3": 29374.8, "solar_coverage_pct": 48.39, "annual_diesel_saved_l": 1762.5, "annual_opex_low_idr": 700000, "annual_opex_high_idr": 1300000, "capex_low": 35000000, "capex_high": 65000000}, {"kabupaten": "Gunungkidul", "capacity_kwp": 1.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 12986.4, "annual_solar_m3": 6324.2, "solar_coverage_pct": 48.7, "annual_diesel_saved_l": 253.0, "annual_opex_low_idr": 170000, "annual_opex_high_idr": 310000, "capex_low": 8500000, "capex_high": 15500000}, {"kabupaten": "Gunungkidul", "capacity_kwp": 1.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 12986.4, "annual_solar_m3": 6324.2, "solar_coverage_pct": 48.7, "annual_diesel_saved_l": 379.5, "annual_opex_low_idr": 170000, "annual_opex_high_idr": 310000, "capex_low": 8500000, "capex_high": 15500000}, {"kabupaten": "Gunungkidul", "capacity_kwp": 1.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 12986.4, "annual_solar_m3": 6324.2, "solar_coverage_pct": 48.7, "annual_diesel_saved_l": 253.0, "annual_opex_low_idr": 170000, "annual_opex_high_idr": 310000, "capex_low": 8500000, "capex_high": 15500000}, {"kabupaten": "Gunungkidul", "capacity_kwp": 1.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 12986.4, "annual_solar_m3": 6324.2, "solar_coverage_pct": 48.7, "annual_diesel_saved_l": 379.5, "annual_opex_low_idr": 170000, "annual_opex_high_idr": 310000, "capex_low": 8500000, "capex_high": 15500000}, {"kabupaten": "Gunungkidul", "capacity_kwp": 3.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 12986.4, "annual_solar_m3": 10809.9, "solar_coverage_pct": 83.24, "annual_diesel_saved_l": 432.4, "annual_opex_low_idr": 400000, "annual_opex_high_idr": 760000, "capex_low": 20000000, "capex_high": 38000000}, {"kabupaten": "Gunungkidul", "capacity_kwp": 3.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 12986.4, "annual_solar_m3": 10809.9, "solar_coverage_pct": 83.24, "annual_diesel_saved_l": 648.6, "annual_opex_low_idr": 400000, "annual_opex_high_idr": 760000, "capex_low": 20000000, "capex_high": 38000000}, {"kabupaten": "Gunungkidul", "capacity_kwp": 3.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 3.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 38959.2, "annual_solar_m3": 18972.6, "solar_coverage_pct": 48.7, "annual_diesel_saved_l": 758.9, "annual_opex_low_idr": 400000, "annual_opex_high_idr": 760000, "capex_low": 20000000, "capex_high": 38000000}, {"kabupaten": "Gunungkidul", "capacity_kwp": 3.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 3.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 38959.2, "annual_solar_m3": 18972.6, "solar_coverage_pct": 48.7, "annual_diesel_saved_l": 1138.4, "annual_opex_low_idr": 400000, "annual_opex_high_idr": 760000, "capex_low": 20000000, "capex_high": 38000000}, {"kabupaten": "Gunungkidul", "capacity_kwp": 5.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 12986.4, "annual_solar_m3": 12810.2, "solar_coverage_pct": 98.64, "annual_diesel_saved_l": 512.4, "annual_opex_low_idr": 700000, "annual_opex_high_idr": 1300000, "capex_low": 35000000, "capex_high": 65000000}, {"kabupaten": "Gunungkidul", "capacity_kwp": 5.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 12986.4, "annual_solar_m3": 12810.2, "solar_coverage_pct": 98.64, "annual_diesel_saved_l": 768.6, "annual_opex_low_idr": 700000, "annual_opex_high_idr": 1300000, "capex_low": 35000000, "capex_high": 65000000}, {"kabupaten": "Gunungkidul", "capacity_kwp": 5.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 5.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 64932.1, "annual_solar_m3": 31621.1, "solar_coverage_pct": 48.7, "annual_diesel_saved_l": 1264.8, "annual_opex_low_idr": 700000, "annual_opex_high_idr": 1300000, "capex_low": 35000000, "capex_high": 65000000}, {"kabupaten": "Gunungkidul", "capacity_kwp": 5.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 5.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 64932.1, "annual_solar_m3": 31621.1, "solar_coverage_pct": 48.7, "annual_diesel_saved_l": 1897.3, "annual_opex_low_idr": 700000, "annual_opex_high_idr": 1300000, "capex_low": 35000000, "capex_high": 65000000}, {"kabupaten": "Sleman", "capacity_kwp": 1.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 11271.4, "annual_solar_m3": 5424.2, "solar_coverage_pct": 48.12, "annual_diesel_saved_l": 217.0, "annual_opex_low_idr": 170000, "annual_opex_high_idr": 310000, "capex_low": 8500000, "capex_high": 15500000}, {"kabupaten": "Sleman", "capacity_kwp": 1.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 11271.4, "annual_solar_m3": 5424.2, "solar_coverage_pct": 48.12, "annual_diesel_saved_l": 325.5, "annual_opex_low_idr": 170000, "annual_opex_high_idr": 310000, "capex_low": 8500000, "capex_high": 15500000}, {"kabupaten": "Sleman", "capacity_kwp": 1.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 11271.4, "annual_solar_m3": 5424.2, "solar_coverage_pct": 48.12, "annual_diesel_saved_l": 217.0, "annual_opex_low_idr": 170000, "annual_opex_high_idr": 310000, "capex_low": 8500000, "capex_high": 15500000}, {"kabupaten": "Sleman", "capacity_kwp": 1.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 11271.4, "annual_solar_m3": 5424.2, "solar_coverage_pct": 48.12, "annual_diesel_saved_l": 325.5, "annual_opex_low_idr": 170000, "annual_opex_high_idr": 310000, "capex_low": 8500000, "capex_high": 15500000}, {"kabupaten": "Sleman", "capacity_kwp": 3.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 11271.4, "annual_solar_m3": 9280.5, "solar_coverage_pct": 82.34, "annual_diesel_saved_l": 371.2, "annual_opex_low_idr": 400000, "annual_opex_high_idr": 760000, "capex_low": 20000000, "capex_high": 38000000}, {"kabupaten": "Sleman", "capacity_kwp": 3.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 11271.4, "annual_solar_m3": 9280.5, "solar_coverage_pct": 82.34, "annual_diesel_saved_l": 556.8, "annual_opex_low_idr": 400000, "annual_opex_high_idr": 760000, "capex_low": 20000000, "capex_high": 38000000}, {"kabupaten": "Sleman", "capacity_kwp": 3.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 3.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 33814.1, "annual_solar_m3": 16272.6, "solar_coverage_pct": 48.12, "annual_diesel_saved_l": 650.9, "annual_opex_low_idr": 400000, "annual_opex_high_idr": 760000, "capex_low": 20000000, "capex_high": 38000000}, {"kabupaten": "Sleman", "capacity_kwp": 3.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 3.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 33814.1, "annual_solar_m3": 16272.6, "solar_coverage_pct": 48.12, "annual_diesel_saved_l": 976.4, "annual_opex_low_idr": 400000, "annual_opex_high_idr": 760000, "capex_low": 20000000, "capex_high": 38000000}, {"kabupaten": "Sleman", "capacity_kwp": 5.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 11271.4, "annual_solar_m3": 11109.9, "solar_coverage_pct": 98.57, "annual_diesel_saved_l": 444.4, "annual_opex_low_idr": 700000, "annual_opex_high_idr": 1300000, "capex_low": 35000000, "capex_high": 65000000}, {"kabupaten": "Sleman", "capacity_kwp": 5.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 11271.4, "annual_solar_m3": 11109.9, "solar_coverage_pct": 98.57, "annual_diesel_saved_l": 666.6, "annual_opex_low_idr": 700000, "annual_opex_high_idr": 1300000, "capex_low": 35000000, "capex_high": 65000000}, {"kabupaten": "Sleman", "capacity_kwp": 5.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 5.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 56356.9, "annual_solar_m3": 27121.0, "solar_coverage_pct": 48.12, "annual_diesel_saved_l": 1084.8, "annual_opex_low_idr": 700000, "annual_opex_high_idr": 1300000, "capex_low": 35000000, "capex_high": 65000000}, {"kabupaten": "Sleman", "capacity_kwp": 5.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 5.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 56356.9, "annual_solar_m3": 27121.0, "solar_coverage_pct": 48.12, "annual_diesel_saved_l": 1627.3, "annual_opex_low_idr": 700000, "annual_opex_high_idr": 1300000, "capex_low": 35000000, "capex_high": 65000000}, {"kabupaten": "Purworejo", "capacity_kwp": 1.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 11296.8, "annual_solar_m3": 5485.4, "solar_coverage_pct": 48.56, "annual_diesel_saved_l": 219.4, "annual_opex_low_idr": 170000, "annual_opex_high_idr": 310000, "capex_low": 8500000, "capex_high": 15500000}, {"kabupaten": "Purworejo", "capacity_kwp": 1.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 11296.8, "annual_solar_m3": 5485.4, "solar_coverage_pct": 48.56, "annual_diesel_saved_l": 329.1, "annual_opex_low_idr": 170000, "annual_opex_high_idr": 310000, "capex_low": 8500000, "capex_high": 15500000}, {"kabupaten": "Purworejo", "capacity_kwp": 1.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 11296.8, "annual_solar_m3": 5485.4, "solar_coverage_pct": 48.56, "annual_diesel_saved_l": 219.4, "annual_opex_low_idr": 170000, "annual_opex_high_idr": 310000, "capex_low": 8500000, "capex_high": 15500000}, {"kabupaten": "Purworejo", "capacity_kwp": 1.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 11296.8, "annual_solar_m3": 5485.4, "solar_coverage_pct": 48.56, "annual_diesel_saved_l": 329.1, "annual_opex_low_idr": 170000, "annual_opex_high_idr": 310000, "capex_low": 8500000, "capex_high": 15500000}, {"kabupaten": "Purworejo", "capacity_kwp": 3.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 11296.8, "annual_solar_m3": 9284.3, "solar_coverage_pct": 82.19, "annual_diesel_saved_l": 371.4, "annual_opex_low_idr": 400000, "annual_opex_high_idr": 760000, "capex_low": 20000000, "capex_high": 38000000}, {"kabupaten": "Purworejo", "capacity_kwp": 3.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 11296.8, "annual_solar_m3": 9284.3, "solar_coverage_pct": 82.19, "annual_diesel_saved_l": 557.1, "annual_opex_low_idr": 400000, "annual_opex_high_idr": 760000, "capex_low": 20000000, "capex_high": 38000000}, {"kabupaten": "Purworejo", "capacity_kwp": 3.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 3.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 33890.3, "annual_solar_m3": 16456.1, "solar_coverage_pct": 48.56, "annual_diesel_saved_l": 658.2, "annual_opex_low_idr": 400000, "annual_opex_high_idr": 760000, "capex_low": 20000000, "capex_high": 38000000}, {"kabupaten": "Purworejo", "capacity_kwp": 3.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 3.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 33890.3, "annual_solar_m3": 16456.1, "solar_coverage_pct": 48.56, "annual_diesel_saved_l": 987.4, "annual_opex_low_idr": 400000, "annual_opex_high_idr": 760000, "capex_low": 20000000, "capex_high": 38000000}, {"kabupaten": "Purworejo", "capacity_kwp": 5.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 11296.8, "annual_solar_m3": 11141.3, "solar_coverage_pct": 98.62, "annual_diesel_saved_l": 445.7, "annual_opex_low_idr": 700000, "annual_opex_high_idr": 1300000, "capex_low": 35000000, "capex_high": 65000000}, {"kabupaten": "Purworejo", "capacity_kwp": 5.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 11296.8, "annual_solar_m3": 11141.3, "solar_coverage_pct": 98.62, "annual_diesel_saved_l": 668.5, "annual_opex_low_idr": 700000, "annual_opex_high_idr": 1300000, "capex_low": 35000000, "capex_high": 65000000}, {"kabupaten": "Purworejo", "capacity_kwp": 5.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 5.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 56483.8, "annual_solar_m3": 27426.9, "solar_coverage_pct": 48.56, "annual_diesel_saved_l": 1097.1, "annual_opex_low_idr": 700000, "annual_opex_high_idr": 1300000, "capex_low": 35000000, "capex_high": 65000000}, {"kabupaten": "Purworejo", "capacity_kwp": 5.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 5.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 56483.8, "annual_solar_m3": 27426.9, "solar_coverage_pct": 48.56, "annual_diesel_saved_l": 1645.6, "annual_opex_low_idr": 700000, "annual_opex_high_idr": 1300000, "capex_low": 35000000, "capex_high": 65000000}, {"kabupaten": "Kab. Magelang", "capacity_kwp": 1.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 10963.4, "annual_solar_m3": 5221.8, "solar_coverage_pct": 47.63, "annual_diesel_saved_l": 208.9, "annual_opex_low_idr": 170000, "annual_opex_high_idr": 310000, "capex_low": 8500000, "capex_high": 15500000}, {"kabupaten": "Kab. Magelang", "capacity_kwp": 1.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 10963.4, "annual_solar_m3": 5221.8, "solar_coverage_pct": 47.63, "annual_diesel_saved_l": 313.3, "annual_opex_low_idr": 170000, "annual_opex_high_idr": 310000, "capex_low": 8500000, "capex_high": 15500000}, {"kabupaten": "Kab. Magelang", "capacity_kwp": 1.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 10963.4, "annual_solar_m3": 5221.8, "solar_coverage_pct": 47.63, "annual_diesel_saved_l": 208.9, "annual_opex_low_idr": 170000, "annual_opex_high_idr": 310000, "capex_low": 8500000, "capex_high": 15500000}, {"kabupaten": "Kab. Magelang", "capacity_kwp": 1.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 10963.4, "annual_solar_m3": 5221.8, "solar_coverage_pct": 47.63, "annual_diesel_saved_l": 313.3, "annual_opex_low_idr": 170000, "annual_opex_high_idr": 310000, "capex_low": 8500000, "capex_high": 15500000}, {"kabupaten": "Kab. Magelang", "capacity_kwp": 3.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 10963.4, "annual_solar_m3": 8959.3, "solar_coverage_pct": 81.72, "annual_diesel_saved_l": 358.4, "annual_opex_low_idr": 400000, "annual_opex_high_idr": 760000, "capex_low": 20000000, "capex_high": 38000000}, {"kabupaten": "Kab. Magelang", "capacity_kwp": 3.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 10963.4, "annual_solar_m3": 8959.3, "solar_coverage_pct": 81.72, "annual_diesel_saved_l": 537.6, "annual_opex_low_idr": 400000, "annual_opex_high_idr": 760000, "capex_low": 20000000, "capex_high": 38000000}, {"kabupaten": "Kab. Magelang", "capacity_kwp": 3.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 3.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 32890.1, "annual_solar_m3": 15665.3, "solar_coverage_pct": 47.63, "annual_diesel_saved_l": 626.6, "annual_opex_low_idr": 400000, "annual_opex_high_idr": 760000, "capex_low": 20000000, "capex_high": 38000000}, {"kabupaten": "Kab. Magelang", "capacity_kwp": 3.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 3.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 32890.1, "annual_solar_m3": 15665.3, "solar_coverage_pct": 47.63, "annual_diesel_saved_l": 939.9, "annual_opex_low_idr": 400000, "annual_opex_high_idr": 760000, "capex_low": 20000000, "capex_high": 38000000}, {"kabupaten": "Kab. Magelang", "capacity_kwp": 5.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 10963.4, "annual_solar_m3": 10803.4, "solar_coverage_pct": 98.54, "annual_diesel_saved_l": 432.1, "annual_opex_low_idr": 700000, "annual_opex_high_idr": 1300000, "capex_low": 35000000, "capex_high": 65000000}, {"kabupaten": "Kab. Magelang", "capacity_kwp": 5.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 10963.4, "annual_solar_m3": 10803.4, "solar_coverage_pct": 98.54, "annual_diesel_saved_l": 648.2, "annual_opex_low_idr": 700000, "annual_opex_high_idr": 1300000, "capex_low": 35000000, "capex_high": 65000000}, {"kabupaten": "Kab. Magelang", "capacity_kwp": 5.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 5.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 54816.8, "annual_solar_m3": 26108.8, "solar_coverage_pct": 47.63, "annual_diesel_saved_l": 1044.4, "annual_opex_low_idr": 700000, "annual_opex_high_idr": 1300000, "capex_low": 35000000, "capex_high": 65000000}, {"kabupaten": "Kab. Magelang", "capacity_kwp": 5.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 5.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 54816.8, "annual_solar_m3": 26108.8, "solar_coverage_pct": 47.63, "annual_diesel_saved_l": 1566.5, "annual_opex_low_idr": 700000, "annual_opex_high_idr": 1300000, "capex_low": 35000000, "capex_high": 65000000}, {"kabupaten": "Klaten", "capacity_kwp": 1.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 12866.3, "annual_solar_m3": 6181.1, "solar_coverage_pct": 48.04, "annual_diesel_saved_l": 247.2, "annual_opex_low_idr": 170000, "annual_opex_high_idr": 310000, "capex_low": 8500000, "capex_high": 15500000}, {"kabupaten": "Klaten", "capacity_kwp": 1.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 12866.3, "annual_solar_m3": 6181.1, "solar_coverage_pct": 48.04, "annual_diesel_saved_l": 370.9, "annual_opex_low_idr": 170000, "annual_opex_high_idr": 310000, "capex_low": 8500000, "capex_high": 15500000}, {"kabupaten": "Klaten", "capacity_kwp": 1.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 12866.3, "annual_solar_m3": 6181.1, "solar_coverage_pct": 48.04, "annual_diesel_saved_l": 247.2, "annual_opex_low_idr": 170000, "annual_opex_high_idr": 310000, "capex_low": 8500000, "capex_high": 15500000}, {"kabupaten": "Klaten", "capacity_kwp": 1.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 12866.3, "annual_solar_m3": 6181.1, "solar_coverage_pct": 48.04, "annual_diesel_saved_l": 370.9, "annual_opex_low_idr": 170000, "annual_opex_high_idr": 310000, "capex_low": 8500000, "capex_high": 15500000}, {"kabupaten": "Klaten", "capacity_kwp": 3.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 12866.3, "annual_solar_m3": 10779.7, "solar_coverage_pct": 83.78, "annual_diesel_saved_l": 431.2, "annual_opex_low_idr": 400000, "annual_opex_high_idr": 760000, "capex_low": 20000000, "capex_high": 38000000}, {"kabupaten": "Klaten", "capacity_kwp": 3.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 12866.3, "annual_solar_m3": 10779.7, "solar_coverage_pct": 83.78, "annual_diesel_saved_l": 646.8, "annual_opex_low_idr": 400000, "annual_opex_high_idr": 760000, "capex_low": 20000000, "capex_high": 38000000}, {"kabupaten": "Klaten", "capacity_kwp": 3.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 3.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 38598.9, "annual_solar_m3": 18543.2, "solar_coverage_pct": 48.04, "annual_diesel_saved_l": 741.7, "annual_opex_low_idr": 400000, "annual_opex_high_idr": 760000, "capex_low": 20000000, "capex_high": 38000000}, {"kabupaten": "Klaten", "capacity_kwp": 3.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 3.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 38598.9, "annual_solar_m3": 18543.2, "solar_coverage_pct": 48.04, "annual_diesel_saved_l": 1112.6, "annual_opex_low_idr": 400000, "annual_opex_high_idr": 760000, "capex_low": 20000000, "capex_high": 38000000}, {"kabupaten": "Klaten", "capacity_kwp": 5.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 12866.3, "annual_solar_m3": 12707.5, "solar_coverage_pct": 98.77, "annual_diesel_saved_l": 508.3, "annual_opex_low_idr": 700000, "annual_opex_high_idr": 1300000, "capex_low": 35000000, "capex_high": 65000000}, {"kabupaten": "Klaten", "capacity_kwp": 5.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 12866.3, "annual_solar_m3": 12707.5, "solar_coverage_pct": 98.77, "annual_diesel_saved_l": 762.5, "annual_opex_low_idr": 700000, "annual_opex_high_idr": 1300000, "capex_low": 35000000, "capex_high": 65000000}, {"kabupaten": "Klaten", "capacity_kwp": 5.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 5.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 64331.5, "annual_solar_m3": 30905.3, "solar_coverage_pct": 48.04, "annual_diesel_saved_l": 1236.2, "annual_opex_low_idr": 700000, "annual_opex_high_idr": 1300000, "capex_low": 35000000, "capex_high": 65000000}, {"kabupaten": "Klaten", "capacity_kwp": 5.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 5.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 64331.5, "annual_solar_m3": 30905.3, "solar_coverage_pct": 48.04, "annual_diesel_saved_l": 1854.3, "annual_opex_low_idr": 700000, "annual_opex_high_idr": 1300000, "capex_low": 35000000, "capex_high": 65000000}, {"kabupaten": "Wonogiri", "capacity_kwp": 1.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 12328.6, "annual_solar_m3": 5739.1, "solar_coverage_pct": 46.55, "annual_diesel_saved_l": 229.6, "annual_opex_low_idr": 170000, "annual_opex_high_idr": 310000, "capex_low": 8500000, "capex_high": 15500000}, {"kabupaten": "Wonogiri", "capacity_kwp": 1.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 12328.6, "annual_solar_m3": 5739.1, "solar_coverage_pct": 46.55, "annual_diesel_saved_l": 344.3, "annual_opex_low_idr": 170000, "annual_opex_high_idr": 310000, "capex_low": 8500000, "capex_high": 15500000}, {"kabupaten": "Wonogiri", "capacity_kwp": 1.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 12328.6, "annual_solar_m3": 5739.1, "solar_coverage_pct": 46.55, "annual_diesel_saved_l": 229.6, "annual_opex_low_idr": 170000, "annual_opex_high_idr": 310000, "capex_low": 8500000, "capex_high": 15500000}, {"kabupaten": "Wonogiri", "capacity_kwp": 1.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 12328.6, "annual_solar_m3": 5739.1, "solar_coverage_pct": 46.55, "annual_diesel_saved_l": 344.3, "annual_opex_low_idr": 170000, "annual_opex_high_idr": 310000, "capex_low": 8500000, "capex_high": 15500000}, {"kabupaten": "Wonogiri", "capacity_kwp": 3.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 12328.6, "annual_solar_m3": 10191.5, "solar_coverage_pct": 82.67, "annual_diesel_saved_l": 407.7, "annual_opex_low_idr": 400000, "annual_opex_high_idr": 760000, "capex_low": 20000000, "capex_high": 38000000}, {"kabupaten": "Wonogiri", "capacity_kwp": 3.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 12328.6, "annual_solar_m3": 10191.5, "solar_coverage_pct": 82.67, "annual_diesel_saved_l": 611.5, "annual_opex_low_idr": 400000, "annual_opex_high_idr": 760000, "capex_low": 20000000, "capex_high": 38000000}, {"kabupaten": "Wonogiri", "capacity_kwp": 3.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 3.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 36985.8, "annual_solar_m3": 17217.2, "solar_coverage_pct": 46.55, "annual_diesel_saved_l": 688.7, "annual_opex_low_idr": 400000, "annual_opex_high_idr": 760000, "capex_low": 20000000, "capex_high": 38000000}, {"kabupaten": "Wonogiri", "capacity_kwp": 3.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 3.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 36985.8, "annual_solar_m3": 17217.2, "solar_coverage_pct": 46.55, "annual_diesel_saved_l": 1033.0, "annual_opex_low_idr": 400000, "annual_opex_high_idr": 760000, "capex_low": 20000000, "capex_high": 38000000}, {"kabupaten": "Wonogiri", "capacity_kwp": 5.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 12328.6, "annual_solar_m3": 12158.9, "solar_coverage_pct": 98.62, "annual_diesel_saved_l": 486.4, "annual_opex_low_idr": 700000, "annual_opex_high_idr": 1300000, "capex_low": 35000000, "capex_high": 65000000}, {"kabupaten": "Wonogiri", "capacity_kwp": 5.0, "land_mode": "Individu (1 ha)", "land_area_ha": 1.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 12328.6, "annual_solar_m3": 12158.9, "solar_coverage_pct": 98.62, "annual_diesel_saved_l": 729.5, "annual_opex_low_idr": 700000, "annual_opex_high_idr": 1300000, "capex_low": 35000000, "capex_high": 65000000}, {"kabupaten": "Wonogiri", "capacity_kwp": 5.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 5.0, "diesel_l_per_m3": 0.04, "annual_demand_m3": 61643.0, "annual_solar_m3": 28695.4, "solar_coverage_pct": 46.55, "annual_diesel_saved_l": 1147.8, "annual_opex_low_idr": 700000, "annual_opex_high_idr": 1300000, "capex_low": 35000000, "capex_high": 65000000}, {"kabupaten": "Wonogiri", "capacity_kwp": 5.0, "land_mode": "Kelompok Tani (1 ha/kWp)", "land_area_ha": 5.0, "diesel_l_per_m3": 0.06, "annual_demand_m3": 61643.0, "annual_solar_m3": 28695.4, "solar_coverage_pct": 46.55, "annual_diesel_saved_l": 1721.7, "annual_opex_low_idr": 700000, "annual_opex_high_idr": 1300000, "capex_low": 35000000, "capex_high": 65000000}], "monthly": {"Bantul": [{"month": 1, "nfr": 2.35, "rad": 17.04, "rain": 10.88}, {"month": 2, "nfr": 1.72, "rad": 17.82, "rain": 11.61}, {"month": 3, "nfr": 2.33, "rad": 18.28, "rain": 9.97}, {"month": 4, "nfr": 3.12, "rad": 18.06, "rain": 8.76}, {"month": 5, "nfr": 4.8, "rad": 17.58, "rain": 4.82}, {"month": 6, "nfr": 4.38, "rad": 16.94, "rain": 3.95}, {"month": 7, "nfr": 0.0, "rad": 17.74, "rain": 1.59}, {"month": 8, "nfr": 0.0, "rad": 19.82, "rain": 0.96}, {"month": 9, "nfr": 0.0, "rad": 21.11, "rain": 2.15}, {"month": 10, "nfr": 0.0, "rad": 20.81, "rain": 4.62}, {"month": 11, "nfr": 2.29, "rad": 17.88, "rain": 11.85}, {"month": 12, "nfr": 2.51, "rad": 17.06, "rain": 11.02}], "Gunungkidul": [{"month": 1, "nfr": 2.36, "rad": 17.09, "rain": 10.63}, {"month": 2, "nfr": 1.92, "rad": 17.88, "rain": 10.98}, {"month": 3, "nfr": 2.57, "rad": 18.28, "rain": 9.25}, {"month": 4, "nfr": 3.54, "rad": 18.21, "rain": 7.67}, {"month": 5, "nfr": 5.12, "rad": 17.75, "rain": 4.43}, {"month": 6, "nfr": 4.8, "rad": 17.05, "rain": 3.34}, {"month": 7, "nfr": 0.0, "rad": 18.0, "rain": 0.87}, {"month": 8, "nfr": 0.0, "rad": 20.11, "rain": 0.75}, {"month": 9, "nfr": 0.0, "rad": 21.54, "rain": 1.54}, {"month": 10, "nfr": 0.0, "rad": 21.3, "rain": 3.55}, {"month": 11, "nfr": 3.12, "rad": 18.06, "rain": 9.56}, {"month": 12, "nfr": 2.87, "rad": 17.02, "rain": 9.93}], "Kab. Magelang": [{"month": 1, "nfr": 1.82, "rad": 15.93, "rain": 12.65}, {"month": 2, "nfr": 1.23, "rad": 16.44, "rain": 13.55}, {"month": 3, "nfr": 1.81, "rad": 17.32, "rain": 10.92}, {"month": 4, "nfr": 2.65, "rad": 17.15, "rain": 9.53}, {"month": 5, "nfr": 4.36, "rad": 17.02, "rain": 5.25}, {"month": 6, "nfr": 3.82, "rad": 16.45, "rain": 4.05}, {"month": 7, "nfr": 0.0, "rad": 17.13, "rain": 2.15}, {"month": 8, "nfr": 0.0, "rad": 19.0, "rain": 1.48}, {"month": 9, "nfr": 0.0, "rad": 20.35, "rain": 2.98}, {"month": 10, "nfr": 0.0, "rad": 19.81, "rain": 5.98}, {"month": 11, "nfr": 1.87, "rad": 16.9, "rain": 13.47}, {"month": 12, "nfr": 2.06, "rad": 16.0, "rain": 11.68}], "Klaten": [{"month": 1, "nfr": 2.35, "rad": 16.72, "rain": 10.45}, {"month": 2, "nfr": 1.47, "rad": 17.26, "rain": 12.27}, {"month": 3, "nfr": 2.34, "rad": 18.06, "rain": 9.41}, {"month": 4, "nfr": 3.58, "rad": 18.19, "rain": 7.71}, {"month": 5, "nfr": 5.27, "rad": 17.87, "rain": 4.41}, {"month": 6, "nfr": 4.94, "rad": 17.31, "rain": 2.67}, {"month": 7, "nfr": 0.0, "rad": 18.18, "rain": 1.18}, {"month": 8, "nfr": 0.0, "rad": 20.24, "rain": 0.72}, {"month": 9, "nfr": 0.0, "rad": 21.69, "rain": 1.73}, {"month": 10, "nfr": 0.0, "rad": 21.48, "rain": 3.97}, {"month": 11, "nfr": 2.93, "rad": 18.43, "rain": 9.43}, {"month": 12, "nfr": 2.99, "rad": 17.06, "rain": 9.59}], "Kulon Progo": [{"month": 1, "nfr": 2.24, "rad": 16.99, "rain": 11.47}, {"month": 2, "nfr": 1.62, "rad": 17.74, "rain": 12.28}, {"month": 3, "nfr": 2.22, "rad": 18.26, "rain": 10.55}, {"month": 4, "nfr": 2.75, "rad": 18.08, "rain": 9.52}, {"month": 5, "nfr": 4.2, "rad": 17.63, "rain": 6.29}, {"month": 6, "nfr": 3.67, "rad": 16.96, "rain": 5.02}, {"month": 7, "nfr": 0.0, "rad": 17.7, "rain": 2.24}, {"month": 8, "nfr": 0.0, "rad": 19.69, "rain": 1.64}, {"month": 9, "nfr": 0.0, "rad": 21.0, "rain": 3.24}, {"month": 10, "nfr": 0.0, "rad": 20.7, "rain": 6.23}, {"month": 11, "nfr": 1.89, "rad": 17.81, "rain": 13.67}, {"month": 12, "nfr": 2.42, "rad": 17.0, "rain": 11.36}], "Purworejo": [{"month": 1, "nfr": 2.04, "rad": 16.59, "rain": 12.38}, {"month": 2, "nfr": 1.53, "rad": 17.36, "rain": 12.09}, {"month": 3, "nfr": 2.18, "rad": 18.05, "rain": 10.86}, {"month": 4, "nfr": 2.76, "rad": 17.73, "rain": 8.9}, {"month": 5, "nfr": 4.22, "rad": 17.35, "rain": 5.9}, {"month": 6, "nfr": 3.8, "rad": 16.66, "rain": 4.48}, {"month": 7, "nfr": 0.0, "rad": 17.34, "rain": 2.05}, {"month": 8, "nfr": 0.0, "rad": 19.27, "rain": 1.35}, {"month": 9, "nfr": 0.0, "rad": 20.56, "rain": 3.13}, {"month": 10, "nfr": 0.0, "rad": 20.09, "rain": 5.98}, {"month": 11, "nfr": 2.05, "rad": 17.37, "rain": 13.0}, {"month": 12, "nfr": 2.15, "rad": 16.41, "rain": 12.39}], "Sleman": [{"month": 1, "nfr": 2.22, "rad": 16.58, "rain": 10.94}, {"month": 2, "nfr": 1.48, "rad": 17.22, "rain": 12.7}, {"month": 3, "nfr": 2.15, "rad": 17.85, "rain": 10.06}, {"month": 4, "nfr": 2.76, "rad": 17.7, "rain": 9.78}, {"month": 5, "nfr": 4.24, "rad": 17.3, "rain": 5.78}, {"month": 6, "nfr": 3.8, "rad": 16.67, "rain": 5.25}, {"month": 7, "nfr": 0.0, "rad": 17.34, "rain": 2.28}, {"month": 8, "nfr": 0.0, "rad": 19.26, "rain": 1.81}, {"month": 9, "nfr": 0.0, "rad": 20.68, "rain": 3.67}, {"month": 10, "nfr": 0.0, "rad": 20.27, "rain": 7.32}, {"month": 11, "nfr": 1.72, "rad": 17.32, "rain": 14.29}, {"month": 12, "nfr": 2.25, "rad": 16.43, "rain": 11.8}], "Wonogiri": [{"month": 1, "nfr": 1.79, "rad": 16.03, "rain": 11.85}, {"month": 2, "nfr": 1.2, "rad": 16.82, "rain": 13.4}, {"month": 3, "nfr": 2.17, "rad": 17.58, "rain": 10.4}, {"month": 4, "nfr": 3.54, "rad": 17.71, "rain": 8.08}, {"month": 5, "nfr": 5.19, "rad": 17.66, "rain": 4.63}, {"month": 6, "nfr": 4.88, "rad": 17.07, "rain": 2.74}, {"month": 7, "nfr": 0.0, "rad": 18.01, "rain": 1.18}, {"month": 8, "nfr": 0.0, "rad": 20.2, "rain": 0.59}, {"month": 9, "nfr": 0.0, "rad": 21.69, "rain": 1.76}, {"month": 10, "nfr": 0.0, "rad": 21.44, "rain": 3.59}, {"month": 11, "nfr": 2.89, "rad": 18.08, "rain": 10.88}, {"month": 12, "nfr": 2.46, "rad": 16.37, "rain": 11.19}]}, "yearly": {"Bantul": [{"year": 2011, "days": 139}, {"year": 2012, "days": 131}, {"year": 2013, "days": 123}, {"year": 2014, "days": 140}, {"year": 2015, "days": 125}, {"year": 2016, "days": 100}, {"year": 2017, "days": 133}, {"year": 2018, "days": 166}, {"year": 2019, "days": 168}, {"year": 2020, "days": 115}, {"year": 2021, "days": 128}, {"year": 2022, "days": 107}, {"year": 2023, "days": 163}, {"year": 2024, "days": 133}, {"year": 2025, "days": 128}], "Gunungkidul": [{"year": 2011, "days": 157}, {"year": 2012, "days": 166}, {"year": 2013, "days": 139}, {"year": 2014, "days": 169}, {"year": 2015, "days": 167}, {"year": 2016, "days": 140}, {"year": 2017, "days": 133}, {"year": 2018, "days": 158}, {"year": 2019, "days": 161}, {"year": 2020, "days": 124}, {"year": 2021, "days": 125}, {"year": 2022, "days": 113}, {"year": 2023, "days": 172}, {"year": 2024, "days": 135}, {"year": 2025, "days": 125}], "Kab. Magelang": [{"year": 2011, "days": 107}, {"year": 2012, "days": 116}, {"year": 2013, "days": 91}, {"year": 2014, "days": 116}, {"year": 2015, "days": 108}, {"year": 2016, "days": 93}, {"year": 2017, "days": 129}, {"year": 2018, "days": 146}, {"year": 2019, "days": 140}, {"year": 2020, "days": 122}, {"year": 2021, "days": 111}, {"year": 2022, "days": 97}, {"year": 2023, "days": 152}, {"year": 2024, "days": 128}, {"year": 2025, "days": 132}], "Klaten": [{"year": 2011, "days": 121}, {"year": 2012, "days": 131}, {"year": 2013, "days": 96}, {"year": 2014, "days": 123}, {"year": 2015, "days": 127}, {"year": 2016, "days": 114}, {"year": 2017, "days": 166}, {"year": 2018, "days": 184}, {"year": 2019, "days": 173}, {"year": 2020, "days": 153}, {"year": 2021, "days": 158}, {"year": 2022, "days": 132}, {"year": 2023, "days": 173}, {"year": 2024, "days": 157}, {"year": 2025, "days": 148}], "Kulon Progo": [{"year": 2011, "days": 139}, {"year": 2012, "days": 131}, {"year": 2013, "days": 123}, {"year": 2014, "days": 140}, {"year": 2015, "days": 125}, {"year": 2016, "days": 100}, {"year": 2017, "days": 116}, {"year": 2018, "days": 145}, {"year": 2019, "days": 159}, {"year": 2020, "days": 99}, {"year": 2021, "days": 116}, {"year": 2022, "days": 99}, {"year": 2023, "days": 145}, {"year": 2024, "days": 111}, {"year": 2025, "days": 123}], "Purworejo": [{"year": 2011, "days": 133}, {"year": 2012, "days": 140}, {"year": 2013, "days": 131}, {"year": 2014, "days": 152}, {"year": 2015, "days": 151}, {"year": 2016, "days": 123}, {"year": 2017, "days": 112}, {"year": 2018, "days": 138}, {"year": 2019, "days": 148}, {"year": 2020, "days": 102}, {"year": 2021, "days": 115}, {"year": 2022, "days": 85}, {"year": 2023, "days": 138}, {"year": 2024, "days": 114}, {"year": 2025, "days": 121}], "Sleman": [{"year": 2011, "days": 139}, {"year": 2012, "days": 131}, {"year": 2013, "days": 123}, {"year": 2014, "days": 141}, {"year": 2015, "days": 125}, {"year": 2016, "days": 100}, {"year": 2017, "days": 128}, {"year": 2018, "days": 151}, {"year": 2019, "days": 142}, {"year": 2020, "days": 108}, {"year": 2021, "days": 120}, {"year": 2022, "days": 98}, {"year": 2023, "days": 131}, {"year": 2024, "days": 120}, {"year": 2025, "days": 114}], "Wonogiri": [{"year": 2011, "days": 104}, {"year": 2012, "days": 129}, {"year": 2013, "days": 92}, {"year": 2014, "days": 113}, {"year": 2015, "days": 125}, {"year": 2016, "days": 85}, {"year": 2017, "days": 147}, {"year": 2018, "days": 176}, {"year": 2019, "days": 170}, {"year": 2020, "days": 146}, {"year": 2021, "days": 128}, {"year": 2022, "days": 115}, {"year": 2023, "days": 161}, {"year": 2024, "days": 140}, {"year": 2025, "days": 137}]}, "stats": {"anova_F": 42.28, "anova_p": 9.139376469982957e-60, "ttest_season_t": 56.39, "mean_nfr_kemarau": 4.47, "mean_nfr_hujan": 2.3}, "ml": {"train_rows": 23200, "test_rows": 5808, "models": {"Climatology (baseline)": {"accuracy": 0.5977961432506887, "precision": 0.6820765441455097, "recall": 0.545950864422202, "f1": 0.6064690026954178, "roc_auc": 0.6512335713760274, "tn": 1672, "fp": 839, "fn": 1497, "tp": 1800}, "Persistence (baseline)": {"accuracy": 0.7112603305785123, "precision": 0.7472527472527473, "recall": 0.7424931756141947, "f1": 0.7448653582838887, "roc_auc": null, "tn": 1683, "fp": 828, "fn": 849, "tp": 2448}, "Logistic Regression (t=0.50)": {"accuracy": 0.731404958677686, "precision": 0.7788121990369181, "recall": 0.7358204428268122, "f1": 0.7567061759201498, "roc_auc": 0.7942065527390734, "tn": 1822, "fp": 689, "fn": 871, "tp": 2426}, "Logistic Regression (FN:FP=3:1, t=0.21)": {"accuracy": 0.6014118457300276, "precision": 0.5903237674760854, "recall": 0.9733090688504701, "f1": 0.7349135463185618, "roc_auc": 0.7942065527390734, "tn": 284, "fp": 2227, "fn": 88, "tp": 3209}, "Random Forest (t=0.50)": {"accuracy": 0.7272727272727273, "precision": 0.7744312720281961, "recall": 0.7330906885047013, "f1": 0.7531941414770956, "roc_auc": 0.7901913412951469, "tn": 1807, "fp": 704, "fn": 880, "tp": 2417}, "Random Forest (FN:FP=3:1, t=0.24)": {"accuracy": 0.6098484848484849, "precision": 0.59644527595884, "recall": 0.9669396420988777, "f1": 0.7377921777366351, "roc_auc": 0.7901913412951469, "tn": 354, "fp": 2157, "fn": 109, "tp": 3188}, "Random Forest (FN:FP=5:1, t=0.15)": {"accuracy": 0.5697314049586777, "precision": 0.5688405797101449, "recall": 1.0, "f1": 0.7251732101616628, "roc_auc": 0.7901913412951469, "tn": 12, "fp": 2499, "fn": 0, "tp": 3297}}, "top_features": {"rain_mm": 0.1296, "nfr_mm": 0.1181, "rain_roll3": 0.061, "need_irrigation": 0.0491, "cloud_roll7": 0.0478, "nfr_roll3": 0.0454, "doy_cos": 0.0453, "rain_roll7": 0.0437, "rh_mean_pct": 0.0409, "cloud_mean_pct": 0.039}, "calibration": [{"month": 1, "prob_lr": 0.4522, "actual": 0.5067, "count": 744}, {"month": 2, "prob_lr": 0.4039, "actual": 0.3515, "count": 680}, {"month": 3, "prob_lr": 0.5125, "actual": 0.5309, "count": 744}, {"month": 4, "prob_lr": 0.597, "actual": 0.6056, "count": 720}, {"month": 5, "prob_lr": 0.7221, "actual": 0.6841, "count": 744}, {"month": 6, "prob_lr": 0.8457, "actual": 0.8534, "count": 696}, {"month": 10, "prob_lr": 0.4171, "actual": 0.375, "count": 24}, {"month": 11, "prob_lr": 0.4563, "actual": 0.4708, "count": 720}, {"month": 12, "prob_lr": 0.5229, "actual": 0.5421, "count": 736}]}};
+
+const state = {
+  tab: "map",
+  land: "Kelompok Tani (1 ha/kWp)",
+  cap: 5.0,
+  rate: 0.04,
+  price: 23700,
+  selectedKab: "Gunungkidul",
+  playing: false,
+  timer: null,
+};
+
+const fmtRp = (n) => "Rp " + Math.round(n).toLocaleString("id-ID");
+const bepColor = (bep) => (bep === null || bep > 5) ? "#F43F5E" : (bep <= 3 ? "#2DD4BF" : "#F59E0B");
+
+// Initialize clean CartoDB Positron map (Foundry minimalist style)
+const map = L.map("map", { zoomControl: false, attributionControl: true }).setView([-7.78, 110.35], 10);
+L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+  attribution: "&copy; OpenStreetMap &copy; CARTO | Weather: Open-Meteo (CC BY 4.0)",
+  maxZoom: 15,
+}).addTo(map);
+
+const markers = {};
+const circles = {};
+
+function computeScenario(kab) {
+  const rec = DATA.roi.find(
+    (r) => r.kabupaten === kab && r.land_mode === state.land && r.capacity_kwp === state.cap && r.diesel_l_per_m3 === state.rate
+  );
+  const gross = rec.annual_diesel_saved_l * state.price;
+  const netLow = gross - rec.annual_opex_low_idr;
+  const netHigh = gross - rec.annual_opex_high_idr;
+  const bepLow = netLow > 0 ? rec.capex_low / netLow : null;
+  const bepHigh = netHigh > 0 ? rec.capex_high / netHigh : null;
+  return { ...rec, gross, netLow, netHigh, bepLow, bepHigh };
+}
+
+function renderAll() {
+  const computed = DATA.regions.map((reg) => ({ ...reg, ...computeScenario(reg.kabupaten) }));
+  computed.sort((a, b) => (a.bepLow ?? 99) - (b.bepLow ?? 99));
+
+  // Top KPIs
+  const avgBep = computed.reduce((s, x) => s + (x.bepLow ?? 0), 0) / computed.length;
+  const viableCount = computed.filter((x) => x.bepLow !== null && x.bepLow <= 5).length;
+  const avgCov = computed.reduce((s, x) => s + x.solar_coverage_pct, 0) / computed.length;
+  const totalNet = computed.reduce((s, x) => s + Math.max(0, x.netLow), 0);
+
+  document.getElementById("kpi-bep").textContent = avgBep.toFixed(2) + " thn";
+  document.getElementById("kpi-bep").style.color = bepColor(avgBep);
+  document.getElementById("kpi-viable").textContent = `${viableCount}/8 kab layak (< 5 thn)`;
+  document.getElementById("kpi-cov").textContent = avgCov.toFixed(1) + "%";
+  document.getElementById("kpi-save").textContent = fmtRp(totalNet / 8 / 1e6).replace("Rp ", "Rp ") + " jt/kab/thn";
+
+  // Ranked sidebar list
+  const listEl = document.getElementById("reg-list");
+  listEl.innerHTML = "";
+  const maxBep = Math.max(...computed.map((x) => x.bepLow ?? 10), 6);
+
+  computed.forEach((item) => {
+    const col = bepColor(item.bepLow);
+    const pct = item.bepLow ? Math.min(100, Math.max(12, (1 - item.bepLow / (maxBep + 2)) * 100)) : 5;
+    const div = document.createElement("div");
+    div.className = "reg-item" + (item.kabupaten === state.selectedKab ? " selected" : "");
+    div.innerHTML = `
+      <div class="reg-top">
+        <span class="reg-name">${item.kabupaten}</span>
+        <span class="reg-bep" style="color:${col}">${item.bepLow ? item.bepLow.toFixed(2) + " thn" : ">25 thn"}</span>
+      </div>
+      <div class="reg-meta">
+        <span>Hemat ${(item.netLow / 1e6).toFixed(1)} jt/thn</span>
+        <span>Range ${item.bepLow?.toFixed(1)}–${item.bepHigh?.toFixed(1)} thn</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%; background:${col}"></div></div>
+    `;
+    div.onclick = () => {
+      state.selectedKab = item.kabupaten;
+      map.panTo([item.lat, item.lon - 0.12], { animate: true });
+      renderAll();
+      if (state.tab === "climate") renderClimateCharts();
+    };
+    listEl.appendChild(div);
+
+    // Map circle + floating Foundry pill badge
+    const radius = 5500 + (item.netLow / 1e6) * 260;
+    if (!circles[item.kabupaten]) {
+      circles[item.kabupaten] = L.circle([item.lat, item.lon], { radius, weight: 2, fillOpacity: 0.25 }).addTo(map);
+    }
+    circles[item.kabupaten].setStyle({ color: col, fillColor: col }).setRadius(Math.min(16000, Math.max(5000, radius)));
+
+    const icon = L.divIcon({
+      className: "",
+      html: `<div class="map-badge" style="border-color:${item.kabupaten === state.selectedKab ? '#2DD4BF' : 'rgba(255,255,255,0.2)'}">
+               <span class="mb-name">${item.kabupaten}</span>
+               <span class="mb-val" style="color:${col}">${item.bepLow ? item.bepLow.toFixed(2) + " thn" : "N/A"}</span>
+             </div>`,
+      iconSize: [108, 36],
+      iconAnchor: [54, 18],
+    });
+    if (!markers[item.kabupaten]) {
+      markers[item.kabupaten] = L.marker([item.lat, item.lon], { icon }).addTo(map).on("click", () => {
+        state.selectedKab = item.kabupaten;
+        renderAll();
+        if (state.tab === "climate") renderClimateCharts();
+      });
+    } else {
+      markers[item.kabupaten].setIcon(icon);
+    }
+  });
+}
+
+// Charts (Climate & ML)
+let chMonthly = null, chYearly = null, chMlCal = null;
+const MONTHS = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agt","Sep","Okt","Nov","Des"];
+
+function renderClimateCharts() {
+  const kab = state.selectedKab;
+  document.getElementById("clim-title").textContent = `Iklim & Sinergi Agroklimat — ${kab}`;
+  document.getElementById("st-f").textContent = DATA.stats.anova_F;
+  document.getElementById("st-t").textContent = DATA.stats.ttest_season_t;
+
+  const mData = DATA.monthly[kab];
+  if (chMonthly) chMonthly.destroy();
+  chMonthly = new Chart(document.getElementById("chart-monthly"), {
+    data: {
+      labels: MONTHS,
+      datasets: [
+        { type: "bar", label: "NFR (mm/hr)", data: mData.map(x => x.nfr), backgroundColor: "rgba(45,212,191,0.65)", yAxisID: "y" },
+        { type: "line", label: "Radiasi (MJ/m²/hr)", data: mData.map(x => x.rad), borderColor: "#F59E0B", backgroundColor: "#F59E0B", tension: 0.35, yAxisID: "y1" },
+      ],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: "#E4E4E7", font: { size: 11 } } } },
+      scales: {
+        x: { ticks: { color: "#A1A1AA" }, grid: { color: "rgba(255,255,255,0.05)" } },
+        y: { position: "left", ticks: { color: "#2DD4BF" }, grid: { color: "rgba(255,255,255,0.06)" } },
+        y1: { position: "right", min: 14, max: 22, ticks: { color: "#F59E0B" }, grid: { drawOnChartArea: false } },
+      },
+    },
+  });
+
+  const yData = DATA.yearly[kab];
+  if (chYearly) chYearly.destroy();
+  chYearly = new Chart(document.getElementById("chart-yearly"), {
+    type: "bar",
+    data: {
+      labels: yData.map(x => x.year),
+      datasets: [{
+        label: "Hari Butuh Irigasi",
+        data: yData.map(x => x.days),
+        backgroundColor: yData.map(x => [2018, 2019, 2023].includes(x.year) ? "#F43F5E" : "rgba(167,139,250,0.65)"),
+        borderRadius: 4,
+      }],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: "#E4E4E7", font: { size: 11 } } } },
+      scales: {
+        x: { ticks: { color: "#A1A1AA" }, grid: { display: false } },
+        y: { ticks: { color: "#A1A1AA" }, grid: { color: "rgba(255,255,255,0.06)" } },
+      },
+    },
+  });
+}
+
+function renderMlView() {
+  if (!chMlCal) {
+    const cal = DATA.ml.calibration;
+    chMlCal = new Chart(document.getElementById("chart-ml-cal"), {
+      type: "line",
+      data: {
+        labels: cal.map(x => MONTHS[x.month - 1]),
+        datasets: [
+          { label: "Prediksi (prob_lr)", data: cal.map(x => x.prob_lr), borderColor: "#2DD4BF", tension: 0.35, borderWidth: 2.5 },
+          { label: "Aktual (target_next)", data: cal.map(x => x.actual), borderColor: "#A78BFA", borderDash: [5, 4], tension: 0.35, borderWidth: 2.5 },
+        ],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: "#E4E4E7", font: { size: 11 } } } },
+        scales: {
+          x: { ticks: { color: "#A1A1AA" }, grid: { color: "rgba(255,255,255,0.05)" } },
+          y: { min: 0.2, max: 1.0, ticks: { color: "#A1A1AA" }, grid: { color: "rgba(255,255,255,0.06)" } },
+        },
+      },
+    });
+  }
+  const tbl = document.getElementById("ml-table");
+  if (!tbl.innerHTML) {
+    let html = "<thead><tr><th>Model</th><th>Acc</th><th>Recall</th><th>F1</th><th>AUC</th><th>FN (Gagal)</th><th>FP</th></tr></thead><tbody>";
+    for (const [name, m] of Object.entries(DATA.ml.models)) {
+      const hi = name.includes("Logistic Regression (FN:FP=3:1") ? ' class="hi"' : "";
+      html += `<tr${hi}><td>${name}</td><td>${m.accuracy.toFixed(3)}</td><td>${m.recall.toFixed(3)}</td><td>${m.f1.toFixed(3)}</td><td>${m.roc_auc ? m.roc_auc.toFixed(3) : "-"}</td><td>${m.fn}</td><td>${m.fp}</td></tr>`;
+    }
+    tbl.innerHTML = html + "</tbody>";
+  }
+}
+
+// Event bindings
+function bindSeg(id, key, isNum = false) {
+  document.querySelectorAll(`#${id} .seg-btn`).forEach((btn) => {
+    btn.onclick = () => {
+      document.querySelectorAll(`#${id} .seg-btn`).forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      state[key] = isNum ? parseFloat(btn.dataset.val) : btn.dataset.val;
+      renderAll();
+    };
+  });
+}
+bindSeg("ctrl-land", "land");
+bindSeg("ctrl-cap", "cap", true);
+bindSeg("ctrl-rate", "rate", true);
+
+const slider = document.getElementById("price-slider");
+const priceDisp = document.getElementById("price-display");
+function setPrice(val) {
+  state.price = Number(val);
+  slider.value = state.price;
+  priceDisp.textContent = fmtRp(state.price) + " / liter";
+  document.querySelectorAll(".preset-pill").forEach((p) => p.classList.toggle("active", Number(p.dataset.price) === state.price));
+  renderAll();
+}
+slider.oninput = (e) => setPrice(e.target.value);
+document.querySelectorAll(".preset-pill").forEach((btn) => { btn.onclick = () => setPrice(btn.dataset.price); });
+
+document.getElementById("play-btn").onclick = () => {
+  const btn = document.getElementById("play-btn");
+  if (state.playing) {
+    clearInterval(state.timer);
+    state.playing = false;
+    btn.textContent = "▶";
+  } else {
+    if (state.price >= 28000) setPrice(6800);
+    state.playing = true;
+    btn.textContent = "❚❚";
+    state.timer = setInterval(() => {
+      if (state.price >= 24000) {
+        clearInterval(state.timer);
+        state.playing = false;
+        btn.textContent = "▶";
+        return;
+      }
+      setPrice(state.price + 400);
+    }, 120);
+  }
+};
+
+document.querySelectorAll(".nav-btn").forEach((btn) => {
+  btn.onclick = () => {
+    document.querySelectorAll(".nav-btn").forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    state.tab = btn.dataset.tab;
+    document.querySelectorAll(".overlay-view").forEach((v) => v.classList.remove("open"));
+    document.getElementById("bottom-dock").style.display = state.tab === "map" ? "flex" : "none";
+    if (state.tab !== "map") {
+      document.getElementById(`view-${state.tab}`).classList.add("open");
+      if (state.tab === "climate") renderClimateCharts();
+      if (state.tab === "ml") renderMlView();
+    }
+  };
+});
+
+renderAll();
+</script>
+</body>
+</html>
