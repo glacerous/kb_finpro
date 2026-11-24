@@ -238,11 +238,11 @@ def build_deck() -> None:
         left=0.7, top=4.08, width=7.3, height=2.5, size=13, gap=10,
     )
 
-    # Right-side verified news proof box (auto-embeds screenshot if present, else clean citation card)
+    # Right-side verified news proof box (auto-embeds screenshot if present)
     news_img = Path("docs/screenshots/news_antara_biosolar_2026.png")
     if news_img.exists():
-        add_framed_image(s2, str(news_img), 8.25, 3.75, 4.35)
-        add_text(s2, 8.25, 6.28, 4.35, 0.4, "Bukti: ANTARA News & CNBC Indonesia (Nov 2026)", size=9.5, color=MUTED)
+        add_framed_image(s2, str(news_img), 8.25, 3.72, 4.35)
+        add_text(s2, 8.25, 6.72, 4.35, 0.4, "Jawa Pos (9 Nov 2026): jaminan Biosolar hanya s.d. 31 Des 2026.", size=9.5, color=MUTED)
     else:
         add_text(s2, 8.25, 3.72, 4.35, 0.3, "SUMBER KEBIJAKAN BBM (2026)", size=10.5, bold=True, color=FOREST)
         add_clean_list(
@@ -427,7 +427,7 @@ def build_deck() -> None:
     add_clean_list(
         s9,
         [
-            ("1. Dinas Pertanian & ESDM:", "Prioritaskan hibah komunal 5 kWp (5 ha) ke Gunungkidul & Klaten sebelum batas subsidi Des 2026."),
+            ("1. Dinas Pertanian & ESDM:", "Prioritaskan hibah komunal 5 kWp (5 ha) ke Gunungkidul & Klaten — sudah layak di Biosolar & siap menghadapi risiko penyesuaian subsidi 2027."),
             ("2. Petani & Gapoktan:", "Sisihkan 15% penghematan solar tahunan untuk dana cadangan (sinking fund) ganti motor pompa."),
             ("3. Operasional Harian:", "Pakai sinyal prediksi H+1 (Recall 97,3%) untuk jadwal pompa & verifikasi kalender ke KATAM."),
         ],
