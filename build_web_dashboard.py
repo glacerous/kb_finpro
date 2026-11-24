@@ -195,13 +195,13 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     cursor: pointer;
     transition: fill 0.22s ease, opacity 0.2s ease, filter 0.2s ease;
   }
-  .poly-study.dimmed { opacity: 0.56; }
-  .poly-study:hover { opacity: 0.95; }
+  .poly-study.dimmed { opacity: 0.90; }
+  .poly-study:hover { opacity: 1; }
   .poly-study.selected {
     opacity: 1;
     stroke: #FFFFFF;
-    stroke-width: 1.9;
-    filter: drop-shadow(0 3px 8px rgba(15, 23, 42, 0.18));
+    stroke-width: 2.0;
+    filter: drop-shadow(0 3px 8px rgba(15, 23, 42, 0.22));
   }
 
   .ctx-label {
@@ -570,18 +570,15 @@ function lerpHex(a, b, t) {
   return "#" + pa.map((v, i) => Math.round(v + (pb[i] - v) * c).toString(16).padStart(2, "0")).join("");
 }
 
-// Smooth Foundry teal (< 5 yr viable) <-> lavender (>= 5 yr slow) with relative shading
+// Smooth continuous 3-stop Foundry diverging ramp: teal (#2D9C8D) -> pearl (#E6E8EB) -> lavender (#8A7DC7)
 function bepFill(bep, minBep, maxBep) {
-  if (bep === null) return "#968BCE";
+  if (bep === null) return "#8A7DC7";
   const rel = maxBep > minBep ? (bep - minBep) / (maxBep - minBep) : 0.5;
-  if (bep < 5.0) {
-    // Rich teal (#3AA89A) for fastest -> airy pale mint (#B8E6DF) for slower viable
-    const absT = Math.min(1, Math.max(0, (bep - 1.1) / 3.9));
-    return lerpHex("#3AA89A", "#B8E6DF", 0.55 * absT + 0.45 * rel);
-  }
-  // Soft lavender (#D4CEE9) just above 5 yr -> deeper lavender (#968BCE) for very slow
-  const overT = Math.min(1, (bep - 5.0) / 5.0);
-  return lerpHex("#D4CEE9", "#968BCE", 0.6 * overT + 0.4 * rel);
+  // Blend 55% absolute scale (1.2..8.5 yr) + 45% relative spread so transition is always smooth & legible
+  const absT = Math.max(0, Math.min(1, (bep - 1.2) / 6.5));
+  const t = Math.max(0, Math.min(1, 0.50 * absT + 0.50 * rel));
+  if (t <= 0.5) return lerpHex("#2D9C8D", "#DCEAE7", t * 2);
+  return lerpHex("#E2E0EC", "#8A7DC7", (t - 0.5) * 2);
 }
 function bepStatusCol(bep) {
   return (bep === null || bep > 5) ? "#6453B4" : "#1E7F74";
