@@ -471,11 +471,11 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
         <span class="tick-link" data-price="23700" style="cursor:pointer;">Rp 23.700 (Dexlite)</span>
         <span class="tick-link" data-price="30000" style="cursor:pointer;">Rp 30.000</span>
       </div>
-      <input type="range" id="price-slider" min="6800" max="30000" step="100" value="23700" />
+      <input type="range" id="price-slider" min="6800" max="30000" step="100" value="6800" />
     </div>
     <div class="price-readout">
-      <strong id="price-display">Rp 23.700 / L</strong>
-      <span id="price-tag">Non-subsidi</span>
+      <strong id="price-display">Rp 6.800 / L</strong>
+      <span id="price-tag">Biosolar subsidi</span>
     </div>
   </div>
 </div>
@@ -557,22 +557,31 @@ const state = {
   land: "Kelompok Tani (1 ha/kWp)",
   cap: 5.0,
   rate: 0.04,
-  price: 23700,
+  price: 6800,
   selectedKab: "Gunungkidul",
-  playing: false,
-  timer: null,
 };
 
 const fmtRp = (n) => "Rp " + Math.round(n).toLocaleString("id-ID");
 
-// Foundry-exact airy pastel choropleth palette (soft teal <-> soft lavender)
-function bepFill(bep) {
-  if (bep === null || bep >= 9) return "#A79CD6";   // soft deep lavender
-  if (bep >= 6.5) return "#C2BAE4";                 // medium pastel lavender
-  if (bep >= 5.0) return "#DCD7F0";                 // very light lavender
-  if (bep >= 3.5) return "#BFEAE4";                 // pale mint
-  if (bep >= 2.2) return "#8AD5CB";                 // Foundry mint-teal
-  return "#5BC0B3";                                 // Foundry emerald-teal
+function lerpHex(a, b, t) {
+  const c = Math.max(0, Math.min(1, t));
+  const pa = [1, 3, 5].map((i) => parseInt(a.slice(i, i + 2), 16));
+  const pb = [1, 3, 5].map((i) => parseInt(b.slice(i, i + 2), 16));
+  return "#" + pa.map((v, i) => Math.round(v + (pb[i] - v) * c).toString(16).padStart(2, "0")).join("");
+}
+
+// Smooth Foundry teal (< 5 yr viable) <-> lavender (>= 5 yr slow) with relative shading
+function bepFill(bep, minBep, maxBep) {
+  if (bep === null) return "#968BCE";
+  const rel = maxBep > minBep ? (bep - minBep) / (maxBep - minBep) : 0.5;
+  if (bep < 5.0) {
+    // Rich teal (#3AA89A) for fastest -> airy pale mint (#B8E6DF) for slower viable
+    const absT = Math.min(1, Math.max(0, (bep - 1.1) / 3.9));
+    return lerpHex("#3AA89A", "#B8E6DF", 0.55 * absT + 0.45 * rel);
+  }
+  // Soft lavender (#D4CEE9) just above 5 yr -> deeper lavender (#968BCE) for very slow
+  const overT = Math.min(1, (bep - 5.0) / 5.0);
+  return lerpHex("#D4CEE9", "#968BCE", 0.6 * overT + 0.4 * rel);
 }
 function bepStatusCol(bep) {
   return (bep === null || bep > 5) ? "#6453B4" : "#1E7F74";
@@ -740,6 +749,9 @@ function renderAll() {
   computed.sort((a, b) => (a.bepLow ?? 99) - (b.bepLow ?? 99));
 
   const viable = computed.filter((x) => x.bepLow !== null && x.bepLow <= 5).length;
+  const validBeps = computed.map((x) => x.bepLow).filter((v) => v !== null);
+  const minBep = Math.min(...validBeps);
+  const maxBep = Math.max(...validBeps);
   const avgBep = computed.reduce((s, x) => s + (x.bepLow ?? 0), 0) / computed.length;
   document.getElementById("sb-summary").textContent = `${viable}/8 layak · avg ${avgBep.toFixed(2)} thn`;
   document.getElementById("top-status").textContent = `${state.cap} kWp · ${viable}/8 Kab Layak (< 5 thn)`;
@@ -748,7 +760,7 @@ function renderAll() {
     const p = studyPaths[item.kabupaten];
     if (p) {
       const isSel = item.kabupaten === state.selectedKab;
-      p.style.fill = bepFill(item.bepLow);
+      p.style.fill = bepFill(item.bepLow, minBep, maxBep);
       p.classList.toggle("selected", isSel);
       p.classList.toggle("dimmed", !isSel);
       if (isSel) gStudy.appendChild(p); // bring to front so full outline renders cleanly
@@ -763,7 +775,7 @@ function renderAll() {
   const maxNet = Math.max(...computed.map((x) => Math.max(1, x.netLow)));
 
   computed.forEach((item) => {
-    const fillCol = bepFill(item.bepLow);
+    const fillCol = bepFill(item.bepLow, minBep, maxBep);
     const wPct = Math.max(12, Math.min(100, (item.netLow / maxNet) * 100));
     const row = document.createElement("div");
     row.className = "reg-row" + (item.kabupaten === state.selectedKab ? " selected" : "");
