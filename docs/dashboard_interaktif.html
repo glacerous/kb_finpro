@@ -4,21 +4,25 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>SOLAR-GRID · DIY &amp; Jateng Selatan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet" />
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <style>
   :root {
     --ocean: #FFFFFF;
-    --land: #E7E7E5;
-    --panel: rgba(60, 62, 67, 0.92);
-    --panel-deep: rgba(46, 48, 53, 0.94);
-    --border: rgba(255, 255, 255, 0.12);
+    --land: #EBEBE8;
+    --panel: rgba(52, 54, 59, 0.93);
+    --panel-deep: rgba(38, 40, 44, 0.96);
+    --border: rgba(255, 255, 255, 0.10);
     --ink-light: #F4F4F5;
-    --ink-muted: #B4B6BC;
-    --ink-dark: #1F2328;
-    --teal-txt: #1E7F74;
+    --ink-muted: #A6A9B0;
+    --ink-dark: #18181B;
+    --teal-txt: #1A7A6E;
     --lav-txt: #6453B4;
     --gold: #E8C05A;
-    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
+    --font: "Plus Jakarta Sans", "Inter", sans-serif;
+    --mono: "JetBrains Mono", monospace;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -29,6 +33,7 @@
     width: 100vw;
     overflow: hidden;
     user-select: none;
+    -webkit-font-smoothing: antialiased;
   }
 
   /* Pure white Foundry ocean + crisp full-Java SVG landmass */
@@ -43,40 +48,40 @@
   .poly-neighbor {
     fill: var(--land);
     stroke: #FFFFFF;
-    stroke-width: 0.7;
+    stroke-width: 0.65;
   }
   .poly-study {
     stroke: #FFFFFF;
-    stroke-width: 1.25;
+    stroke-width: 1.1;
     cursor: pointer;
-    transition: fill 0.22s ease, stroke 0.15s ease, filter 0.15s ease;
+    transition: fill 0.22s ease, opacity 0.15s ease;
   }
-  .poly-study:hover { filter: brightness(0.94); stroke: #27272A; stroke-width: 1.6; }
-  .poly-study.selected { stroke: #18181B; stroke-width: 2.1; }
+  .poly-study:hover { opacity: 0.86; }
+  .poly-study.selected { stroke: #27272A; stroke-width: 1.35; }
 
   .ctx-label {
-    font-family: var(--font); font-size: 9.5px; fill: #9A9CA3; font-weight: 500;
-    pointer-events: none; text-anchor: middle;
+    font-family: var(--font); font-size: 9.5px; fill: #9CA0A8; font-weight: 500;
+    pointer-events: none; text-anchor: middle; letter-spacing: 0.2px;
   }
   .leader-line {
-    stroke: #3F4147; stroke-width: 1.05; fill: none; pointer-events: none;
+    stroke: #52555C; stroke-width: 0.95; fill: none; pointer-events: none;
   }
   .anchor-dot {
-    fill: #1F2328; stroke: #FFFFFF; stroke-width: 1.2; pointer-events: none;
+    fill: #27272A; stroke: #FFFFFF; stroke-width: 1.4; pointer-events: none;
   }
   .kab-name {
-    font-family: var(--font); font-size: 11.5px; font-weight: 700; fill: #1F2328;
-    pointer-events: none; text-anchor: middle;
+    font-family: var(--font); font-size: 11.5px; font-weight: 700; fill: #18181B;
+    pointer-events: none; text-anchor: middle; letter-spacing: -0.2px;
   }
   .kab-status {
-    font-family: var(--font); font-size: 10px; font-weight: 600;
+    font-family: var(--font); font-size: 9.8px; font-weight: 600;
     pointer-events: none; text-anchor: middle;
   }
   .pill-bg {
-    fill: #1F2024; rx: 9; ry: 9; pointer-events: none;
+    fill: #1D1E22; rx: 9; ry: 9; pointer-events: none;
   }
   .pill-txt {
-    font-family: var(--font); font-size: 9.5px; font-weight: 700; fill: #FFFFFF;
+    font-family: var(--mono); font-size: 9.2px; font-weight: 600; fill: #FFFFFF;
     pointer-events: none; text-anchor: middle; dominant-baseline: central;
   }
 
@@ -292,16 +297,10 @@
       <button class="seg-btn active" data-val="Kelompok Tani (1 ha/kWp)">Kelompok Tani</button>
       <button class="seg-btn" data-val="Individu (1 ha)">Individu (1 ha)</button>
     </div>
-    <div style="display:grid; grid-template-columns: 1.35fr 1fr; gap: 5px;">
-      <div class="seg-row" id="ctrl-cap">
-        <button class="seg-btn" data-val="1">1 kWp</button>
-        <button class="seg-btn" data-val="3">3</button>
-        <button class="seg-btn active" data-val="5">5 kWp</button>
-      </div>
-      <div class="seg-row" id="ctrl-rate">
-        <button class="seg-btn active" data-val="0.04">0,04 L/m³</button>
-        <button class="seg-btn" data-val="0.06">0,06</button>
-      </div>
+    <div class="seg-row" id="ctrl-cap">
+      <button class="seg-btn" data-val="1">1 kWp</button>
+      <button class="seg-btn" data-val="3">3 kWp</button>
+      <button class="seg-btn active" data-val="5">5 kWp</button>
     </div>
   </div>
 
@@ -317,37 +316,24 @@
       <span><span class="sq" style="background:#5BC0B3"></span>layak (&lt; 5 thn)</span>
       <span><span class="sq" style="background:#A79ED6"></span>lama (&gt; 5 thn)</span>
     </div>
-    <div>lebar batang = penghematan bersih tahunan</div>
   </div>
 </aside>
 
-<!-- Bottom Foundry Dock -->
+<!-- Bottom Foundry Scrubber (minimal, zero redundant pills) -->
 <div class="bottom-dock" id="bottom-dock">
-  <div class="dock-pill">
-    <span>Skenario BBM</span>
-    <button class="preset-btn" data-price="6800">Biosolar</button>
-    <button class="preset-btn" data-price="15000">Transisi</button>
-    <button class="preset-btn active" data-price="23700">Dexlite</button>
-  </div>
-  <div class="dock-pill">
-    <span style="color:#FFFFFF;font-weight:700;">Skala BEP</span>
-    <span>lama</span>
-    <div class="mini-ramp"></div>
-    <span>cepat</span>
-  </div>
   <div class="scrubber">
     <button class="play-btn" id="play-btn" title="Animasi kenaikan harga solar">▶</button>
     <div class="slider-col">
       <div class="slider-ticks">
-        <span>Rp 6.800 (Biosolar)</span>
-        <span>Rp 15.000</span>
-        <span>Rp 23.700 (Dexlite)</span>
-        <span>Rp 30.000</span>
+        <span class="tick-link" data-price="6800" style="cursor:pointer;">Rp 6.800 (Biosolar)</span>
+        <span class="tick-link" data-price="15000" style="cursor:pointer;">Rp 15.000</span>
+        <span class="tick-link" data-price="23700" style="cursor:pointer;">Rp 23.700 (Dexlite)</span>
+        <span class="tick-link" data-price="30000" style="cursor:pointer;">Rp 30.000</span>
       </div>
       <input type="range" id="price-slider" min="6800" max="30000" step="100" value="23700" />
     </div>
     <div class="price-readout">
-      <strong id="price-display">Rp 23.700 / L</strong>
+      <strong id="price-display" style="font-family:var(--mono);">Rp 23.700 / L</strong>
       <span id="price-tag">Non-subsidi</span>
     </div>
   </div>
@@ -547,14 +533,22 @@ function initMap() {
     gCallouts.appendChild(t);
   });
 
-  // Foundry-style leader lines + anchor dot + Title + colored status + sleek black pill
+  // Foundry-style leader lines: terminate cleanly at outer edge (never cross text!)
   Object.entries(CALLOUTS).forEach(([kab, [aLon, aLat, lLon, lLat]]) => {
     const [ax, ay] = project(aLon, aLat);
     const [lx, ly] = project(lLon, lLat);
     const g = el("g");
 
-    g.appendChild(el("line", { x1: ax, y1: ay, x2: lx, y2: ly - 16, class: "leader-line" }));
-    g.appendChild(el("circle", { cx: ax, cy: ay, r: 2.8, class: "anchor-dot" }));
+    // Pick clean attachment point on callout block based on relative direction
+    let tx = lx, ty = ly - 17; // default: label is below anchor -> attach to top of title
+    if (Math.abs(ly - ay) < 35 && lx > ax) {
+      tx = lx - 44; ty = ly + 6; // label is to the right (Wonogiri) -> attach to left side
+    } else if (ly < ay) {
+      tx = lx; ty = ly + 36;     // label is above anchor (Magelang, Sleman, Klaten) -> attach to bottom of pill
+    }
+
+    g.appendChild(el("line", { x1: ax, y1: ay, x2: tx, y2: ty, class: "leader-line" }));
+    g.appendChild(el("circle", { cx: ax, cy: ay, r: 2.6, class: "anchor-dot" }));
 
     const title = el("text", { x: lx, y: ly - 4, class: "kab-name" });
     title.textContent = kab;
@@ -563,7 +557,7 @@ function initMap() {
     const status = el("text", { x: lx, y: ly + 9, class: "kab-status" });
     g.appendChild(status);
 
-    const pillW = 70, pillH = 18;
+    const pillW = 72, pillH = 18;
     g.appendChild(el("rect", { x: lx - pillW / 2, y: ly + 15, width: pillW, height: pillH, class: "pill-bg" }));
     const pillTxt = el("text", { x: lx, y: ly + 24, class: "pill-txt" });
     g.appendChild(pillTxt);
@@ -742,7 +736,6 @@ function bindSeg(id, key, isNum = false) {
 }
 bindSeg("ctrl-land", "land");
 bindSeg("ctrl-cap", "cap", true);
-bindSeg("ctrl-rate", "rate", true);
 
 const slider = document.getElementById("price-slider");
 const priceDisp = document.getElementById("price-display");
@@ -752,11 +745,14 @@ function setPrice(val) {
   slider.value = state.price;
   priceDisp.textContent = fmtRp(state.price) + " / L";
   priceTag.textContent = state.price <= 7500 ? "Biosolar subsidi" : (state.price >= 22000 ? "Non-subsidi" : "Skenario transisi");
-  document.querySelectorAll(".preset-btn").forEach((p) => p.classList.toggle("active", Number(p.dataset.price) === state.price));
+  document.querySelectorAll(".tick-link").forEach((t) => {
+    t.style.color = Number(t.dataset.price) === state.price ? "#FFFFFF" : "#A6A9B0";
+    t.style.fontWeight = Number(t.dataset.price) === state.price ? "700" : "500";
+  });
   renderAll();
 }
 slider.oninput = (e) => setPrice(e.target.value);
-document.querySelectorAll(".preset-btn").forEach((btn) => { btn.onclick = () => setPrice(btn.dataset.price); });
+document.querySelectorAll(".tick-link").forEach((el) => { el.onclick = () => setPrice(el.dataset.price); });
 
 document.getElementById("play-btn").onclick = () => {
   const btn = document.getElementById("play-btn");
