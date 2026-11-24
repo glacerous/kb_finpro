@@ -250,12 +250,8 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   .top-bar > * { pointer-events: auto; }
   .brand-row { display: flex; align-items: center; gap: 9px; }
   .brand-mark {
-    display: flex; align-items: center; gap: 7px; color: var(--ink-dark);
-    font-weight: 800; font-size: 15.5px; letter-spacing: -0.4px;
-  }
-  .brand-icon {
-    width: 22px; height: 22px; border-radius: 5px; background: #1F2024; color: #FFFFFF;
-    display: grid; place-items: center; font-size: 11px; font-weight: 800;
+    display: flex; align-items: center; gap: 6px; color: var(--ink-dark);
+    font-weight: 600; font-size: 14.5px; letter-spacing: -0.3px;
   }
   .chip-dark {
     background: var(--panel); color: #FFFFFF; font-size: 11.5px; font-weight: 700;
@@ -415,8 +411,8 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
 <!-- Top Floating Bar -->
 <div class="top-bar">
   <div class="brand-row">
-    <div class="brand-mark"><div class="brand-icon">S</div>SOLAR-GRID</div>
-    <div class="chip-dark">DIY-JATENG <span class="sub">Data publik</span></div>
+    <div class="brand-mark">Irigasi Surya</div>
+    <div class="chip-dark">DIY &amp; Jateng <span class="sub">8 kabupaten</span></div>
   </div>
 
   <div class="nav-pills">
