@@ -144,7 +144,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
 <title>SOLAR-GRID · DIY &amp; Jateng Selatan</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <style>
   :root {
@@ -159,12 +159,13 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     --teal-txt: #1A7A6E;
     --lav-txt: #6453B4;
     --gold: #E8C05A;
-    --font: "Plus Jakarta Sans", "Inter", sans-serif;
-    --mono: "JetBrains Mono", monospace;
+    --font: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+    --mono: "Inter", -apple-system, sans-serif;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: var(--font);
+    font-weight: 400;
     background: var(--ocean);
     color: var(--ink-light);
     height: 100vh;
@@ -190,37 +191,43 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   }
   .poly-study {
     stroke: #FFFFFF;
-    stroke-width: 1.1;
+    stroke-width: 1.15;
     cursor: pointer;
-    transition: fill 0.22s ease, opacity 0.18s ease;
+    transition: fill 0.22s ease, opacity 0.2s ease, filter 0.2s ease;
   }
-  .poly-study.dimmed { opacity: 0.68; }
-  .poly-study:hover { opacity: 1; }
-  .poly-study.selected { opacity: 1; stroke: #18181B; stroke-width: 1.5; }
+  .poly-study.dimmed { opacity: 0.56; }
+  .poly-study:hover { opacity: 0.95; }
+  .poly-study.selected {
+    opacity: 1;
+    stroke: #FFFFFF;
+    stroke-width: 1.9;
+    filter: drop-shadow(0 3px 8px rgba(15, 23, 42, 0.18));
+  }
 
   .ctx-label {
-    font-family: var(--font); font-size: 9.5px; fill: #9CA0A8; font-weight: 500;
-    pointer-events: none; text-anchor: middle; letter-spacing: 0.2px;
+    font-family: var(--font); font-size: 9.5px; fill: #9CA0A8; font-weight: 400;
+    pointer-events: none; text-anchor: middle;
   }
   .leader-line {
-    stroke: #52555C; stroke-width: 0.95; fill: none; pointer-events: none;
+    stroke: #6B7280; stroke-width: 0.85; fill: none; pointer-events: none;
   }
   .anchor-dot {
-    fill: #27272A; stroke: #FFFFFF; stroke-width: 1.4; pointer-events: none;
+    fill: #374151; stroke: #FFFFFF; stroke-width: 1.3; pointer-events: none;
   }
   .kab-name {
-    font-family: var(--font); font-size: 11.5px; font-weight: 700; fill: #18181B;
-    pointer-events: none; text-anchor: middle; letter-spacing: -0.2px;
+    font-family: var(--font); font-size: 11px; font-weight: 600; fill: #1F2937;
+    pointer-events: none; text-anchor: middle; letter-spacing: -0.15px;
   }
   .kab-status {
-    font-family: var(--font); font-size: 9.8px; font-weight: 600;
+    font-family: var(--font); font-size: 9.5px; font-weight: 500;
     pointer-events: none; text-anchor: middle;
   }
   .pill-bg {
-    fill: #1D1E22; rx: 9; ry: 9; pointer-events: none;
+    fill: #1F2024; rx: 9; ry: 9; pointer-events: none;
   }
   .pill-txt {
-    font-family: var(--mono); font-size: 9.2px; font-weight: 600; fill: #FFFFFF;
+    font-family: var(--font); font-size: 9.2px; font-weight: 500; fill: #F9FAFB;
+    font-variant-numeric: tabular-nums;
     pointer-events: none; text-anchor: middle; dominant-baseline: central;
   }
 
@@ -458,10 +465,9 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   </div>
 </aside>
 
-<!-- Bottom Foundry Scrubber (minimal, zero redundant pills) -->
+<!-- Bottom Foundry Scrubber (minimal, zero play button) -->
 <div class="bottom-dock" id="bottom-dock">
-  <div class="scrubber">
-    <button class="play-btn" id="play-btn" title="Animasi kenaikan harga solar">▶</button>
+  <div class="scrubber" style="padding: 9px 18px;">
     <div class="slider-col">
       <div class="slider-ticks">
         <span class="tick-link" data-price="6800" style="cursor:pointer;">Rp 6.800 (Biosolar)</span>
@@ -472,7 +478,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
       <input type="range" id="price-slider" min="6800" max="30000" step="100" value="23700" />
     </div>
     <div class="price-readout">
-      <strong id="price-display" style="font-family:var(--mono);">Rp 23.700 / L</strong>
+      <strong id="price-display">Rp 23.700 / L</strong>
       <span id="price-tag">Non-subsidi</span>
     </div>
   </div>
@@ -618,7 +624,7 @@ const CALLOUTS = {
   "Kulon Progo":   [110.16, -7.83, 110.03, -8.17],
   "Bantul":        [110.35, -7.91, 110.36, -8.25],
   "Gunungkidul":   [110.62, -8.00, 110.74, -8.26],
-  "Wonogiri":      [110.95, -7.90, 111.34, -7.95],
+  "Wonogiri":      [110.95, -7.90, 111.18, -8.12],
   "Kab. Magelang": [110.22, -7.52, 110.05, -7.24],
   "Sleman":        [110.38, -7.71, 110.42, -7.30],
   "Klaten":        [110.63, -7.70, 110.95, -7.42],
@@ -898,29 +904,6 @@ function setPrice(val) {
 }
 slider.oninput = (e) => setPrice(e.target.value);
 document.querySelectorAll(".tick-link").forEach((el) => { el.onclick = () => setPrice(el.dataset.price); });
-
-document.getElementById("play-btn").onclick = () => {
-  const btn = document.getElementById("play-btn");
-  if (state.playing) {
-    clearInterval(state.timer);
-    state.playing = false;
-    btn.textContent = "▶";
-  } else {
-    if (state.price >= 24000) setPrice(6800);
-    state.playing = true;
-    btn.textContent = "❚❚";
-    state.timer = setInterval(() => {
-      if (state.price >= 23700) {
-        setPrice(23700);
-        clearInterval(state.timer);
-        state.playing = false;
-        btn.textContent = "▶";
-        return;
-      }
-      setPrice(state.price + 400);
-    }, 110);
-  }
-};
 
 document.querySelectorAll(".nav-btn").forEach((btn) => {
   btn.onclick = () => {
