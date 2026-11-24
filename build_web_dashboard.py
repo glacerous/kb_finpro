@@ -192,10 +192,11 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     stroke: #FFFFFF;
     stroke-width: 1.1;
     cursor: pointer;
-    transition: fill 0.22s ease, opacity 0.15s ease;
+    transition: fill 0.22s ease, opacity 0.18s ease;
   }
-  .poly-study:hover { opacity: 0.86; }
-  .poly-study.selected { stroke: #27272A; stroke-width: 1.35; }
+  .poly-study.dimmed { opacity: 0.68; }
+  .poly-study:hover { opacity: 1; }
+  .poly-study.selected { opacity: 1; stroke: #18181B; stroke-width: 1.5; }
 
   .ctx-label {
     font-family: var(--font); font-size: 9.5px; fill: #9CA0A8; font-weight: 500;
@@ -639,8 +640,9 @@ const el = (tag, attrs = {}) => {
 
 const gNeighbors = el("g");
 const gStudy = el("g");
+const gEnclaves = el("g");
 const gCallouts = el("g");
-svg.append(gNeighbors, gStudy, gCallouts);
+svg.append(gNeighbors, gStudy, gEnclaves, gCallouts);
 
 const studyPaths = {};
 const labelStatus = {};
@@ -650,9 +652,11 @@ const tooltip = document.getElementById("tooltip");
 function initMap() {
   DATA.geojson.features.forEach((feat) => {
     const kab = feat.properties.kab;
+    const rawName = feat.properties.name;
     const d = geomToPath(feat.geometry);
     if (!kab) {
-      gNeighbors.appendChild(el("path", { d, class: "poly-neighbor" }));
+      const target = (rawName === "Kota Yogyakarta" || rawName === "Kota Magelang") ? gEnclaves : gNeighbors;
+      target.appendChild(el("path", { d, class: "poly-neighbor" }));
     } else {
       const path = el("path", { d, class: "poly-study" });
       path.addEventListener("mouseenter", (e) => showTooltip(kab, e));
@@ -714,7 +718,7 @@ function showTooltip(kab, e) {
     <div class="tt-r"><span>BEP (Low – High)</span><b>${sc.bepLow ? sc.bepLow.toFixed(2) : "N/A"} – ${sc.bepHigh ? sc.bepHigh.toFixed(2) : "N/A"} thn</b></div>
     <div class="tt-r"><span>Hemat Bersih/thn</span><b>${(sc.netLow / 1e6).toFixed(1)} jt</b></div>
     <div class="tt-r"><span>Solar Coverage</span><b>${sc.solar_coverage_pct.toFixed(1)}%</b></div>
-    <div class="tt-r"><span>NFR / Radiasi</span><b>${reg.mean_nfr} mm · ${reg.mean_rad} MJ/m²</b></div>
+    <div class="tt-r"><span>NFR / Radiasi</span><b>${reg.mean_nfr.toFixed(2)} mm · ${reg.mean_rad.toFixed(1)} MJ/m²</b></div>
   `;
   tooltip.style.display = "block";
   moveTooltip(e);
@@ -741,8 +745,11 @@ function renderAll() {
   computed.forEach((item) => {
     const p = studyPaths[item.kabupaten];
     if (p) {
+      const isSel = item.kabupaten === state.selectedKab;
       p.style.fill = bepFill(item.bepLow);
-      p.classList.toggle("selected", item.kabupaten === state.selectedKab);
+      p.classList.toggle("selected", isSel);
+      p.classList.toggle("dimmed", !isSel);
+      if (isSel) gStudy.appendChild(p); // bring to front so full outline renders cleanly
     }
     labelStatus[item.kabupaten].textContent = item.bepLow ? `BEP ${item.bepLow.toFixed(2)} thn` : "tidak layak";
     labelStatus[item.kabupaten].setAttribute("fill", bepStatusCol(item.bepLow));
