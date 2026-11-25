@@ -461,15 +461,15 @@ function lerpHex(a, b, t) {
   return "#" + pa.map((v, i) => Math.round(v + (pb[i] - v) * c).toString(16).padStart(2, "0")).join("");
 }
 
-// Smooth continuous 3-stop Foundry diverging ramp: teal (#2D9C8D) -> pearl (#E6E8EB) -> lavender (#8A7DC7)
+// Smooth continuous 3-stop Foundry diverging ramp: 82% absolute BEP (dramatic drag shift!) + 18% relative shading
 function bepFill(bep, minBep, maxBep) {
-  if (bep === null) return "#8A7DC7";
+  if (bep === null) return "#7E70C2";
   const rel = maxBep > minBep ? (bep - minBep) / (maxBep - minBep) : 0.5;
-  // Blend 55% absolute scale (1.2..8.5 yr) + 45% relative spread so transition is always smooth & legible
-  const absT = Math.max(0, Math.min(1, (bep - 1.2) / 6.5));
-  const t = Math.max(0, Math.min(1, 0.50 * absT + 0.50 * rel));
-  if (t <= 0.5) return lerpHex("#2D9C8D", "#DCEAE7", t * 2);
-  return lerpHex("#E2E0EC", "#8A7DC7", (t - 0.5) * 2);
+  // Map absolute BEP: 1.0 yr -> 0.0 (rich teal), 4.8 yr -> 0.5 (pearl), 8.5+ yr -> 1.0 (deep lavender)
+  const absT = Math.max(0, Math.min(1, (bep - 1.0) / 7.5));
+  const t = Math.max(0, Math.min(1, 0.82 * absT + 0.18 * rel));
+  if (t <= 0.5) return lerpHex("#1F8F81", "#DCEAE7", t * 2);
+  return lerpHex("#E2DFEE", "#7E70C2", (t - 0.5) * 2);
 }
 function bepStatusCol(bep) {
   return (bep === null || bep > 5) ? "#6453B4" : "#1E7F74";
@@ -491,7 +491,7 @@ function computeScenario(kab) {
 const LON_MIN = 109.25, LON_MAX = 111.75;
 const LAT_MIN = -8.48,  LAT_MAX = -7.02;
 const SVG_W = 1280, SVG_H = 740;
-const PAD_L = 310, PAD_R = 20, PAD_T = 25, PAD_B = 55;
+const PAD_L = 310, PAD_R = 20, PAD_T = 32, PAD_B = 96;
 
 function project(lon, lat) {
   const x = PAD_L + ((lon - LON_MIN) / (LON_MAX - LON_MIN)) * (SVG_W - PAD_L - PAD_R);
