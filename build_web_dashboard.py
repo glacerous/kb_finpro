@@ -6,6 +6,7 @@ as a crisp, 100% offline vector SVG choropleth — zero tile servers or API keys
 Outputs: `docs/dashboard_interaktif.html`
 """
 
+import base64
 import json
 from pathlib import Path
 import pandas as pd
@@ -16,6 +17,7 @@ from stage5_roi_sim import CAPEX_TABLE
 
 OUT_HTML = Path("docs/dashboard_interaktif.html")
 GEOJSON_PATH = Path("data/processed/diy_jateng_adm2.geojson")
+HILLSHADE_PATH = Path("data/processed/java_hillshade.jpg")
 
 # Map geoBoundaries shapeName -> our canonical kabupaten name
 SHAPE_TO_KAB = {
@@ -119,8 +121,13 @@ def extract_real_payload() -> dict:
         for r in REGIONS
     ]
 
+    hillshade_b64 = ""
+    if HILLSHADE_PATH.exists():
+        hillshade_b64 = "data:image/jpeg;base64," + base64.b64encode(HILLSHADE_PATH.read_bytes()).decode("ascii")
+
     return {
         "geojson": geojson,
+        "hillshade": hillshade_b64,
         "regions": regions_out,
         "roi": base_roi.to_dict(orient="records"),
         "monthly": monthly_by_kab,
@@ -675,11 +682,13 @@ const el = (tag, attrs = {}) => {
   return n;
 };
 
-// Soft cartographic coastal shadow filter
+// Soft cartographic coastal shadow filter + land clipPath for hillshade
 const defs = el("defs");
 const flt = el("filter", { id: "land-shadow", x: "-5%", y: "-5%", width: "110%", height: "115%" });
 flt.appendChild(el("feDropShadow", { dx: "0", dy: "3", stdDeviation: "4", "flood-color": "#334155", "flood-opacity": "0.14" }));
 defs.appendChild(flt);
+const landClip = el("clipPath", { id: "java-land-clip" });
+defs.appendChild(landClip);
 svg.appendChild(defs);
 
 const gViewport = el("g");
@@ -688,10 +697,11 @@ const gLandWrap = el("g", { filter: "url(#land-shadow)" });
 const gNeighbors = el("g");
 const gStudy = el("g");
 const gEnclaves = el("g");
+const gHillshade = el("g", { "clip-path": "url(#java-land-clip)", style: "mix-blend-mode: multiply; opacity: 0.38; pointer-events: none;" });
 const gLandmarks = el("g");
 const gCallouts = el("g");
 gLandWrap.append(gNeighbors, gStudy, gEnclaves);
-gViewport.append(gGrat, gLandWrap, gLandmarks, gCallouts);
+gViewport.append(gGrat, gLandWrap, gHillshade, gLandmarks, gCallouts);
 svg.appendChild(gViewport);
 
 const studyPaths = {};
@@ -733,6 +743,7 @@ function initMap() {
     const kab = feat.properties.kab;
     const rawName = feat.properties.name;
     const d = geomToPath(feat.geometry);
+    landClip.appendChild(el("path", { d }));
     if (!kab) {
       const target = (rawName === "Kota Yogyakarta" || rawName === "Kota Magelang") ? gEnclaves : gNeighbors;
       target.appendChild(el("path", { d, class: "poly-neighbor" }));
@@ -746,6 +757,18 @@ function initMap() {
       studyPaths[kab] = path;
     }
   });
+
+  // Real Esri World Hillshade elevation relief clipped strictly to Java landmass
+  if (DATA.hillshade) {
+    gHillshade.appendChild(el("image", {
+      href: DATA.hillshade,
+      x: PAD_L,
+      y: PAD_T,
+      width: SVG_W - PAD_L - PAD_R,
+      height: SVG_H - PAD_T - PAD_B,
+      preserveAspectRatio: "none",
+    }));
+  }
 
   // Subtle mountain peak triangles (explains orographic rain/clouds in Magelang & Sleman)
   PEAKS.forEach(([name, lon, lat]) => {
