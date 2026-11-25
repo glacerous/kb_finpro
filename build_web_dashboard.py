@@ -175,23 +175,52 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     -webkit-font-smoothing: antialiased;
   }
 
-  /* Pure white Foundry ocean + crisp full-Java SVG landmass */
+  /* Subtle coastal ocean gradient + high-precision SVG cartography */
   #map-stage {
     position: fixed;
     inset: 0;
     z-index: 1;
-    background: #FFFFFF;
+    background: linear-gradient(180deg, #F6F8FA 0%, #EDF2F7 100%);
+    cursor: grab;
   }
-  #map-svg { width: 100%; height: 100%; display: block; }
+  #map-stage:active { cursor: grabbing; }
+  #map-svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+    shape-rendering: geometricPrecision;
+  }
+
+  .grat-line {
+    stroke: rgba(100, 116, 139, 0.14);
+    stroke-width: 0.6;
+    stroke-dasharray: 2 3;
+    vector-effect: non-scaling-stroke;
+    pointer-events: none;
+  }
+  .grat-lbl {
+    font-family: var(--font); font-size: 8.5px; fill: #94A3B8; font-weight: 400;
+    pointer-events: none;
+  }
+  .ocean-lbl {
+    font-family: var(--font); font-size: 11px; fill: #94A3B8; font-weight: 500;
+    letter-spacing: 5px; opacity: 0.65; pointer-events: none; text-anchor: middle;
+  }
+  .peak-lbl {
+    font-family: var(--font); font-size: 8.5px; fill: #64748B; font-weight: 500;
+    pointer-events: none;
+  }
 
   .poly-neighbor {
-    fill: var(--land);
-    stroke: #FFFFFF;
-    stroke-width: 0.65;
+    fill: #EAEAE6;
+    stroke: #F8FAFC;
+    stroke-width: 0.7;
+    vector-effect: non-scaling-stroke;
   }
   .poly-study {
     stroke: #FFFFFF;
-    stroke-width: 1.15;
+    stroke-width: 1.1;
+    vector-effect: non-scaling-stroke;
     cursor: pointer;
     transition: fill 0.22s ease, opacity 0.2s ease, filter 0.2s ease;
   }
@@ -646,18 +675,60 @@ const el = (tag, attrs = {}) => {
   return n;
 };
 
+// Soft cartographic coastal shadow filter
+const defs = el("defs");
+const flt = el("filter", { id: "land-shadow", x: "-5%", y: "-5%", width: "110%", height: "115%" });
+flt.appendChild(el("feDropShadow", { dx: "0", dy: "3", stdDeviation: "4", "flood-color": "#334155", "flood-opacity": "0.14" }));
+defs.appendChild(flt);
+svg.appendChild(defs);
+
+const gViewport = el("g");
+const gGrat = el("g");
+const gLandWrap = el("g", { filter: "url(#land-shadow)" });
 const gNeighbors = el("g");
 const gStudy = el("g");
 const gEnclaves = el("g");
+const gLandmarks = el("g");
 const gCallouts = el("g");
-svg.append(gNeighbors, gStudy, gEnclaves, gCallouts);
+gLandWrap.append(gNeighbors, gStudy, gEnclaves);
+gViewport.append(gGrat, gLandWrap, gLandmarks, gCallouts);
+svg.appendChild(gViewport);
 
 const studyPaths = {};
 const labelStatus = {};
 const labelPills = {};
 const tooltip = document.getElementById("tooltip");
 
+const PEAKS = [
+  ["G. Merapi", 110.446, -7.541],
+  ["G. Sumbing", 110.072, -7.384],
+  ["G. Lawu", 111.192, -7.625],
+];
+
 function initMap() {
+  // Subtle lat/lon graticule grid
+  [109.5, 110.0, 110.5, 111.0, 111.5].forEach((lon) => {
+    const [x, y1] = project(lon, LAT_MAX);
+    const [, y2] = project(lon, LAT_MIN);
+    gGrat.appendChild(el("line", { x1: x, y1: 0, x2: x, y2: SVG_H, class: "grat-line" }));
+    const t = el("text", { x: x + 4, y: 74, class: "grat-lbl" });
+    t.textContent = `${lon.toFixed(1)}°E`;
+    gGrat.appendChild(t);
+  });
+  [-7.5, -8.0].forEach((lat) => {
+    const [, y] = project(LON_MIN, lat);
+    gGrat.appendChild(el("line", { x1: PAD_L, y1: y, x2: SVG_W, y2: y, class: "grat-line" }));
+    const t = el("text", { x: SVG_W - 36, y: y - 4, class: "grat-lbl" });
+    t.textContent = `${Math.abs(lat).toFixed(1)}°S`;
+    gGrat.appendChild(t);
+  });
+
+  // Subtle Indian Ocean watermark
+  const [ox, oy] = project(109.85, -8.32);
+  const oceanTxt = el("text", { x: ox, y: oy, class: "ocean-lbl" });
+  oceanTxt.textContent = "SAMUDRA HINDIA";
+  gGrat.appendChild(oceanTxt);
+
   DATA.geojson.features.forEach((feat) => {
     const kab = feat.properties.kab;
     const rawName = feat.properties.name;
@@ -675,6 +746,46 @@ function initMap() {
       studyPaths[kab] = path;
     }
   });
+
+  // Subtle mountain peak triangles (explains orographic rain/clouds in Magelang & Sleman)
+  PEAKS.forEach(([name, lon, lat]) => {
+    const [x, y] = project(lon, lat);
+    gLandmarks.appendChild(el("polygon", {
+      points: `${x},${y - 4.5} ${x - 4},${y + 3} ${x + 4},${y + 3}`,
+      fill: "#64748B", opacity: "0.7",
+    }));
+    const t = el("text", { x: x + 6, y: y + 2.5, class: "peak-lbl" });
+    t.textContent = name;
+    gLandmarks.appendChild(t);
+  });
+
+  // Smooth zoom & pan (wheel + drag)
+  let scale = 1, tx = 0, ty = 0, dragging = false, sx = 0, sy = 0;
+  const applyTransform = () => gViewport.setAttribute("transform", `translate(${tx.toFixed(1)},${ty.toFixed(1)}) scale(${scale.toFixed(3)})`);
+  const stage = document.getElementById("map-stage");
+  stage.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    const factor = e.deltaY < 0 ? 1.12 : 0.89;
+    const next = Math.max(0.85, Math.min(3.0, scale * factor));
+    const rect = svg.getBoundingClientRect();
+    const mx = ((e.clientX - rect.left) / rect.width) * SVG_W;
+    const my = ((e.clientY - rect.top) / rect.height) * SVG_H;
+    tx = mx - (mx - tx) * (next / scale);
+    ty = my - (my - ty) * (next / scale);
+    scale = next;
+    applyTransform();
+  }, { passive: false });
+  stage.addEventListener("mousedown", (e) => {
+    if (e.target.classList.contains("poly-study")) return;
+    dragging = true; sx = e.clientX - tx; sy = e.clientY - ty;
+  });
+  window.addEventListener("mousemove", (e) => {
+    if (!dragging) return;
+    tx = e.clientX - sx; ty = e.clientY - sy;
+    applyTransform();
+  });
+  window.addEventListener("mouseup", () => { dragging = false; });
+  stage.addEventListener("dblclick", () => { scale = 1; tx = 0; ty = 0; applyTransform(); });
 
   NEIGHBOR_LABELS.forEach(([name, lon, lat]) => {
     const [x, y] = project(lon, lat);
