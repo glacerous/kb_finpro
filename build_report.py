@@ -95,6 +95,7 @@ def add_chapter(doc: Document, title: str, page_break: bool = True) -> None:
     h.alignment = WD_ALIGN_PARAGRAPH.CENTER
     h.paragraph_format.space_before = Pt(4)
     h.paragraph_format.space_after = Pt(12)
+    h.paragraph_format.keep_with_next = True
     for run in h.runs:
         run.font.name = "Times New Roman"
         run.font.size = Pt(14)
@@ -184,6 +185,8 @@ def add_code_box(doc: Document, code: str) -> None:
 
 
 def add_figure(doc: Document, img_path: str, caption: str, width_cm: float = 14.2) -> None:
+    img_file = Path(img_path)
+    assert img_file.exists(), f"Missing figure asset: {img_file}"
     p_img = doc.add_paragraph()
     p_img.alignment = WD_ALIGN_PARAGRAPH.CENTER
     p_img.paragraph_format.space_before = Pt(4)
@@ -448,10 +451,14 @@ def build_doc() -> None:
     add_sub(doc, "2.3 Arsitektur Sistem & Desain Data Warehouse Skema Bintang")
     add_p(
         doc,
-        "Data Warehouse diimplementasikan pada PostgreSQL 18 (database kb_solar_irrigation) mengikuti Skema "
-        "Bintang Kimball dengan relasi one-to-many (1 -> *) satu arah dari 3 tabel dimensi ke 5 tabel fakta. "
-        "Pemuatan data menggunakan mekanisme PostgreSQL COPY ke tabel staging temporer diikuti INSERT ... "
-        "ON CONFLICT DO UPDATE agar seluruh pipeline bersifat idempotent (aman dijalankan ulang tanpa duplikasi).",
+        "Arsitektur sistem mengikuti 6 lapisan BI end-to-end: (1) Sumber Data Multi-API (Open-Meteo & NASA POWER), "
+        "(2) Lapisan Ingestion & Quality Gate 4 dimensi (etl_fetch.py & validate_data_quality), (3) Lapisan Data "
+        "Warehouse PostgreSQL 18 (database kb_solar_irrigation) berpola Skema Bintang Kimball dengan relasi "
+        "one-to-many (1 -> *) satu arah dari 3 tabel dimensi ke 5 tabel fakta, (4) Lapisan Analitik & Batch "
+        "Scoring (stage4_stats_ml.py, stage5_roi_sim.py, score_batch.py, dan model artifact irrigation_lr_v1.joblib), "
+        "(5) Lapisan Semantik (model relasional 6 tabel inti & 6 ukuran DAX), serta (6) Lapisan Presentasi "
+        "(Power BI Desktop 3 halaman & Web Dashboard Interaktif offline). Pemuatan data memakai mekanisme "
+        "PostgreSQL COPY ke tabel staging temporer diikuti INSERT ... ON CONFLICT DO UPDATE agar idempotent.",
     )
     add_table(
         doc,
@@ -581,8 +588,12 @@ def build_doc() -> None:
     add_p(
         doc,
         "Pipeline ETL (etl_fetch.py dan etl_load_pg.py) memuat 1.051.968 baris Open-Meteo dan 43.832 baris "
-        "NASA POWER ke PostgreSQL dengan 0 missing values. Indeks B-Tree pada kunci komposit (region_id, "
-        "date_id) dan ts diterapkan untuk mempercepat kueri agregasi multi-tahun.",
+        "NASA POWER ke PostgreSQL. Sebelum pemuatan, fungsi validate_data_quality() menjalankan pengecekan "
+        "fail-fast pada 4 dimensi kualitas data (tersimpan di data/processed/etl_quality_report.json) dengan "
+        "status PASS di seluruh 8 kabupaten: Uniqueness (0 duplikat timestamp/tanggal), Completeness (0 nilai "
+        "NULL/NaN), Accuracy (RH 0-100%, radiasi >= 0, hujan >= 0, suhu 5-50 C), dan Validity (format ISO valid, "
+        "tepat 131.496 jam Open-Meteo dan 5.479 hari NASA per kabupaten). Indeks B-Tree pada kunci komposit "
+        "(region_id, date_id) dan ts diterapkan untuk mempercepat kueri agregasi multi-tahun.",
     )
     add_table(
         doc,
@@ -612,21 +623,23 @@ def build_doc() -> None:
     add_sub(doc, "3.3 Hasil Analisis Statistik Eksploratif & Inferensial")
     add_table(
         doc,
-        ["Uji Statistik", "Variabel Diuji", "Statistik", "p-value", "Interpretasi Bisnis"],
+        ["Uji Statistik", "Variabel Diuji", "Statistik", "p-value", "Ukuran Efek / 95% CI & Interpretasi"],
         [
-            ["One-Way ANOVA", "NFR antar 8 kabupaten", "F = 42,28", "9,14e-60", "Sangat signifikan; Gunungkidul 34% > Magelang"],
-            ["Kruskal-Wallis", "NFR antar 8 kabupaten", "H = 282,68", "3,01e-57", "Mengonfirmasi ANOVA secara non-parametrik"],
-            ["One-Way ANOVA", "Radiasi antar 8 kab.", "F = 50,14", "1,52e-71", "Potensi insolasi berbeda nyata antar daerah"],
-            ["Welch t-test", "NFR Kemarau vs Hujan", "t = 56,39", "< 1e-300", "Kemarau (4,47) hampir 2x Hujan (2,30 mm/hr)"],
-            ["Welch t-test", "NFR MT2 vs MT1", "t = 41,82", "< 1e-300", "MT2 (3,56) jauh lebih kering dari MT1 (2,13)"],
-            ["Welch t-test", "Radiasi Kemarau vs Hujan", "t = 43,12", "< 1e-300", "Radiasi Kemarau (18,93) > Hujan (17,36 MJ/m²)"],
+            ["One-Way ANOVA", "NFR antar 8 kabupaten", "F = 42,28", "9,14e-60", "Eta2 = 0,0101; Levene = 37,86 (p = 3,08e-53); Gunungkidul 34% > Magelang"],
+            ["Kruskal-Wallis", "NFR antar 8 kabupaten", "H = 282,68", "3,01e-57", "Konfirmasi non-parametrik karena varians antar kab. heterogen"],
+            ["One-Way ANOVA", "Radiasi antar 8 kab.", "F = 50,14", "1,52e-71", "Eta2 = 0,0079; potensi insolasi berbeda nyata antar daerah"],
+            ["Welch t-test", "NFR Kemarau vs Hujan", "t = 56,39", "< 1e-300", "Diff +2,17 mm/hr; 95% CI [2,09; 2,24]; Cohen's d = 0,76 (efek besar)"],
+            ["Welch t-test", "NFR MT2 vs MT1", "t = 41,82", "< 1e-300", "Diff +1,43 mm/hr; 95% CI [1,36; 1,50]; Cohen's d = 0,49 (efek sedang)"],
+            ["Welch t-test", "Radiasi Kemarau vs Hujan", "t = 43,12", "< 1e-300", "Diff +1,58 MJ/m2; 95% CI [1,51; 1,65]; Cohen's d = 0,41 (efek sedang)"],
         ],
-        col_widths=[2.7, 3.0, 2.1, 2.0, 5.4],
+        col_widths=[2.5, 2.8, 2.0, 1.9, 6.0],
     )
     add_p(
         doc,
         "Hasil pengujian membuktikan adanya sinergi agroklimat alami: tepat ketika kebutuhan air sawah melonjak "
-        "hampir 2 kali lipat di musim kemarau, pasokan radiasi matahari juga mencapai puncaknya.",
+        "hampir 2 kali lipat di musim kemarau (Cohen's d = 0,76), pasokan radiasi matahari juga meningkat "
+        "signifikan (Cohen's d = 0,41). Uji Levene (p = 3,08e-53) menunjukkan varians antar kabupaten heterogen "
+        "sehingga konfirmasi non-parametrik Kruskal-Wallis dan Welch t-test memperkuat validitas kesimpulan.",
     )
 
     add_sub(doc, "3.4 Evaluasi Kinerja Model Machine Learning H+1 & Optimasi Threshold")
@@ -642,15 +655,19 @@ def build_doc() -> None:
             ["Random Forest (FN:FP=3:1, t=0,24)", "0,610", "0,596", "0,967", "0,738", "0,790", "109", "2.157"],
             ["Random Forest (FN:FP=5:1, t=0,15)", "0,570", "0,569", "1,000", "0,725", "0,790", "0", "2.499"],
         ],
-        col_widths=[5.4, 1.3, 1.3, 1.3, 1.3, 1.6, 1.4, 1.6],
+        col_widths=[5.0, 1.3, 1.3, 1.3, 1.3, 2.0, 1.4, 1.6],
     )
     add_p(
         doc,
         "Pada uji out-of-sample 2023–2025 (5.808 baris), Logistic Regression menjadi model terbaik (ROC-AUC "
         "0,794; F1 0,757), mengalahkan kedua baseline dan unggul tipis atas Random Forest (AUC 0,790). "
-        "Dengan penalaan threshold t = 0,21 (FN:FP = 3:1), hari gagal irigasi (FN) dipangkas 90% dari 849 "
-        "hari (persistence) menjadi hanya 88 hari (Recall 97,33%). Lima fitur terpenting (Random Forest) adalah "
-        "rain_mm (0,130), nfr_mm (0,118), rain_roll3 (0,061), need_irrigation (0,049), dan cloud_roll7 (0,048).",
+        "Validasi silang kronologis 5-Fold TimeSeriesSplit menunjukkan kinerja stabil (LR AUC 0,767 +/- 0,028; "
+        "RF AUC 0,770 +/- 0,028), sementara pengecekan Train-Test AUC Gap membuktikan Logistic Regression bebas "
+        "overfitting (Train 0,786 vs Test 0,794; gap -0,008), jauh lebih baik daripada Random Forest (Train 0,897 "
+        "vs Test 0,790; gap +0,107). Dengan penalaan threshold t = 0,21 (FN:FP = 3:1), hari gagal irigasi (FN) "
+        "dipangkas 90% dari 849 hari (persistence) menjadi hanya 88 hari (Recall 97,33%). Model final diekspor "
+        "ke models/irrigation_lr_v1.joblib dan dioperasionalkan melalui skrip batch scoring mandiri score_batch.py "
+        "yang menghasilkan sinyal SIAGA IRIGASI BESOK (PATS) / TIDAK PERLU IRIGASI secara idempotent.",
     )
 
     add_sub(doc, "3.5 Implementasi Dashboard Interaktif Power BI (kbfinpro.pbix)")
@@ -706,9 +723,10 @@ def build_doc() -> None:
     )
 
     add_sub(doc, "3.7 Aspek Etika, Tata Kelola Data (UU PDP No. 27/2022), Batasan, dan Model Card")
-    add_bullet(doc, "Data cuaca reanalisis bersumber publik tanpa PII (minimalisasi data sesuai UU PDP No. 27/2022). Jika sistem dikembangkan ke tahap lapangan dengan data identitas Gapoktan, wajib diterapkan pseudonimisasi dan enkripsi.", "Tata Kelola & Etika: ")
+    add_bullet(doc, "Data cuaca reanalisis bersumber publik tanpa PII (minimalisasi data sesuai UU PDP No. 27/2022). Jika sistem dikembangkan ke tahap lapangan dengan data identitas Gapoktan, wajib diterapkan pseudonimisasi, enkripsi, dan Role-Based Access Control (RBAC: Admin DW, Analis Dinas, dan Viewer Gapoktan hanya melihat wilayahnya).", "Tata Kelola, Etika & RBAC: ")
+    add_bullet(doc, "Audit Equal Opportunity (Recall & FN Rate) pada threshold produksi t = 0,21 menunjukkan kinerja adil antar provinsi: DIY Recall 97,12% (FN Rate 2,88%) vs Jawa Tengah 97,53% (FN Rate 2,47%; selisih hanya 0,41%). Di tingkat 8 kabupaten, seluruh wilayah mencapai Recall > 93% (rentang 93,39% di Kulon Progo hingga 99,37% di Klaten; selisih maks 5,98%). Sebelum peluncuran penuh, disarankan uji coba A/B (kelompok pilot dengan sinyal H+1 vs kontrol jadwal manual) selama 1 musim tanam.", "Audit Fairness Kuantitatif & Rencana A/B Test: ")
     add_bullet(doc, "(1) Data cuaca merupakan reanalisis, bukan AWS BMKG lokal; (2) Label irigasi sintetis dari neraca air FAO/KP-01 dengan kalender tanam MT1–MT2 asumsi; (3) Kurva debit diekstrapolasi dari 1 studi (Gowa) dengan cut-in 30 W/m²; (4) Biaya ganti motor pompa tahun ke-5–7 belum dimodelkan.", "Batasan Penelitian: ")
-    add_bullet(doc, "Logistic Regression v1.0 (StandardScaler, t = 0,21, FN:FP = 3:1). Intended Use: sinyal pendukung keputusan siaga irigasi harian (H+1) untuk padi sawah. Out-of-Scope: otomasi saklar tanpa pengawasan manusia atau komoditas non-padi. Fairness: dilatih pada data iklim agregat tanpa variabel status kepemilikan lahan.", "Model Card Ringkas: ")
+    add_bullet(doc, "Logistic Regression v1.0 (models/irrigation_lr_v1.joblib, StandardScaler, t = 0,21, FN:FP = 3:1). Intended Use: sinyal pendukung keputusan siaga irigasi harian (H+1) untuk padi sawah. Out-of-Scope: otomasi saklar tanpa pengawasan manusia atau komoditas non-padi. Fairness: dilatih pada data iklim agregat tanpa variabel status kepemilikan lahan.", "Model Card Ringkas: ")
 
     # ================= BAB IV =================
     add_chapter(doc, "BAB IV: KESIMPULAN DAN REKOMENDASI")
@@ -743,7 +761,7 @@ def build_doc() -> None:
     ]
     for ref in refs:
         rp = doc.add_paragraph()
-        rp.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+        rp.alignment = WD_ALIGN_PARAGRAPH.LEFT
         rp.paragraph_format.left_indent = Cm(1.0)
         rp.paragraph_format.first_line_indent = Cm(-1.0)
         rp.paragraph_format.line_spacing = 1.2

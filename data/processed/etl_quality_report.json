@@ -1,0 +1,71 @@
+{
+  "regions": {
+    "kulon_progo": {
+      "kabupaten": "Kulon Progo",
+      "om_rows": 131496,
+      "nasa_rows": 5479,
+      "duplicates": 0,
+      "nulls": 0,
+      "physical_bounds_ok": true
+    },
+    "bantul": {
+      "kabupaten": "Bantul",
+      "om_rows": 131496,
+      "nasa_rows": 5479,
+      "duplicates": 0,
+      "nulls": 0,
+      "physical_bounds_ok": true
+    },
+    "gunungkidul": {
+      "kabupaten": "Gunungkidul",
+      "om_rows": 131496,
+      "nasa_rows": 5479,
+      "duplicates": 0,
+      "nulls": 0,
+      "physical_bounds_ok": true
+    },
+    "sleman": {
+      "kabupaten": "Sleman",
+      "om_rows": 131496,
+      "nasa_rows": 5479,
+      "duplicates": 0,
+      "nulls": 0,
+      "physical_bounds_ok": true
+    },
+    "purworejo": {
+      "kabupaten": "Purworejo",
+      "om_rows": 131496,
+      "nasa_rows": 5479,
+      "duplicates": 0,
+      "nulls": 0,
+      "physical_bounds_ok": true
+    },
+    "kab_magelang": {
+      "kabupaten": "Kab. Magelang",
+      "om_rows": 131496,
+      "nasa_rows": 5479,
+      "duplicates": 0,
+      "nulls": 0,
+      "physical_bounds_ok": true
+    },
+    "klaten": {
+      "kabupaten": "Klaten",
+      "om_rows": 131496,
+      "nasa_rows": 5479,
+      "duplicates": 0,
+      "nulls": 0,
+      "physical_bounds_ok": true
+    },
+    "wonogiri": {
+      "kabupaten": "Wonogiri",
+      "om_rows": 131496,
+      "nasa_rows": 5479,
+      "duplicates": 0,
+      "nulls": 0,
+      "physical_bounds_ok": true
+    }
+  },
+  "total_hourly_rows": 1051968,
+  "total_daily_rows": 43832,
+  "status": "PASS"
+}

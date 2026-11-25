@@ -4,8 +4,10 @@ Reads directly from PostgreSQL (`kb_solar_irrigation`) and writes summary metric
 and out-of-sample test predictions (2023-2025) to `data/processed/`.
 """
 
+import argparse
 import json
 from pathlib import Path
+import joblib
 import numpy as np
 import pandas as pd
 from scipy import stats
@@ -13,12 +15,16 @@ from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, precision_score, recall_score, roc_auc_score
+from sklearn.model_selection import TimeSeriesSplit
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
-from etl_load_pg import get_conn
+from etl_fetch import END_YEAR, OUT_DIR as RAW_DIR, REGIONS, START_YEAR
+from etl_load_pg import build_dim_date, build_irrigation_daily, get_conn
 
 OUT_DIR = Path("data/processed")
+MODEL_DIR = Path("models")
+MODEL_PATH = MODEL_DIR / "irrigation_lr_v1.joblib"
 
 
 def load_daily_from_pg() -> pd.DataFrame:
@@ -62,29 +68,81 @@ def load_daily_from_pg() -> pd.DataFrame:
         conn.close()
 
 
+def load_daily_from_raw() -> pd.DataFrame:
+    """Fallback loader directly from data/raw/*.csv using identical build_irrigation_daily()."""
+    dim_date = build_dim_date()
+    frames = []
+    for rid, reg in enumerate(REGIONS, start=1):
+        om_path = RAW_DIR / f"openmeteo_{reg['slug']}_{START_YEAR}_{END_YEAR}.csv"
+        om_df = pd.read_csv(om_path)
+        daily = build_irrigation_daily(om_df, rid, dim_date)
+        daily["kabupaten"] = reg["kabupaten"]
+        daily["provinsi"] = reg["provinsi"]
+        frames.append(daily)
+    merged = pd.concat(frames, ignore_index=True).merge(
+        dim_date[["date_id", "full_date", "year", "month", "day_of_year", "climate_season", "planting_season", "kc_paddy"]],
+        on="date_id",
+        how="inner",
+    )
+    return merged.sort_values(["region_id", "full_date"]).reset_index(drop=True)
+
+
+def welch_diff_ci_and_d(a: pd.Series, b: pd.Series) -> dict:
+    """Compute Welch 95% CI for mean(a) - mean(b) and Cohen's d effect size."""
+    xa, xb = a.to_numpy(dtype=float), b.to_numpy(dtype=float)
+    na, nb = len(xa), len(xb)
+    va, vb = xa.var(ddof=1), xb.var(ddof=1)
+    diff = float(xa.mean() - xb.mean())
+    se = float(np.sqrt(va / na + vb / nb))
+    df_w = (va / na + vb / nb) ** 2 / ((va / na) ** 2 / (na - 1) + (vb / nb) ** 2 / (nb - 1))
+    t_crit = float(stats.t.ppf(0.975, df_w))
+    pooled_sd = float(np.sqrt(((na - 1) * va + (nb - 1) * vb) / (na + nb - 2)))
+    cohens_d = diff / pooled_sd if pooled_sd > 0 else 0.0
+    return {
+        "diff": round(diff, 4),
+        "ci95_low": round(diff - t_crit * se, 4),
+        "ci95_high": round(diff + t_crit * se, 4),
+        "cohens_d": round(cohens_d, 4),
+    }
+
+
+def anova_eta_squared(groups: list[np.ndarray]) -> float:
+    all_vals = np.concatenate(groups)
+    grand_mean = all_vals.mean()
+    ss_between = sum(len(g) * (g.mean() - grand_mean) ** 2 for g in groups)
+    ss_total = float(((all_vals - grand_mean) ** 2).sum())
+    return float(ss_between / ss_total) if ss_total > 0 else 0.0
+
+
 def run_statistical_tests(df: pd.DataFrame) -> dict:
     in_season = df[df["planting_season"] != "Bera"].copy()
 
-    # 1. One-way ANOVA & Kruskal-Wallis across 8 kabupaten (in-season NFR & radiation)
+    # 1. One-way ANOVA, Eta-squared, Levene & Kruskal-Wallis across 8 kabupaten
     nfr_groups = [g["nfr_mm"].to_numpy() for _, g in in_season.groupby("kabupaten")]
     rad_groups = [g["rad_mj_m2"].to_numpy() for _, g in df.groupby("kabupaten")]
     anova_nfr = stats.f_oneway(*nfr_groups)
+    eta2_nfr = anova_eta_squared(nfr_groups)
+    levene_nfr = stats.levene(*nfr_groups)
     kw_nfr = stats.kruskal(*nfr_groups)
     anova_rad = stats.f_oneway(*rad_groups)
+    eta2_rad = anova_eta_squared(rad_groups)
 
-    # 2. Welch's t-test & Mann-Whitney U: Hujan vs Kemarau (radiation all year; NFR in-season)
+    # 2. Welch's t-test, 95% CI, Cohen's d & Mann-Whitney U
     hujan_nfr = in_season.loc[in_season["climate_season"] == "Hujan", "nfr_mm"]
     kemarau_nfr = in_season.loc[in_season["climate_season"] == "Kemarau", "nfr_mm"]
     t_nfr_season = stats.ttest_ind(kemarau_nfr, hujan_nfr, equal_var=False)
     u_nfr_season = stats.mannwhitneyu(kemarau_nfr, hujan_nfr, alternative="two-sided")
+    ci_nfr_season = welch_diff_ci_and_d(kemarau_nfr, hujan_nfr)
 
     mt1_nfr = in_season.loc[in_season["planting_season"] == "MT1", "nfr_mm"]
     mt2_nfr = in_season.loc[in_season["planting_season"] == "MT2", "nfr_mm"]
     t_nfr_mt = stats.ttest_ind(mt2_nfr, mt1_nfr, equal_var=False)
+    ci_nfr_mt = welch_diff_ci_and_d(mt2_nfr, mt1_nfr)
 
     hujan_rad = df.loc[df["climate_season"] == "Hujan", "rad_mj_m2"]
     kemarau_rad = df.loc[df["climate_season"] == "Kemarau", "rad_mj_m2"]
     t_rad_season = stats.ttest_ind(kemarau_rad, hujan_rad, equal_var=False)
+    ci_rad_season = welch_diff_ci_and_d(kemarau_rad, hujan_rad)
 
     reg_summary = (
         in_season.groupby("kabupaten", as_index=False)
@@ -122,16 +180,25 @@ def run_statistical_tests(df: pd.DataFrame) -> dict:
     return {
         "anova_nfr_F": float(anova_nfr.statistic),
         "anova_nfr_p": float(anova_nfr.pvalue),
+        "anova_nfr_eta2": round(eta2_nfr, 4),
+        "levene_nfr_stat": float(levene_nfr.statistic),
+        "levene_nfr_p": float(levene_nfr.pvalue),
         "kruskal_nfr_H": float(kw_nfr.statistic),
         "kruskal_nfr_p": float(kw_nfr.pvalue),
         "anova_rad_F": float(anova_rad.statistic),
         "anova_rad_p": float(anova_rad.pvalue),
+        "anova_rad_eta2": round(eta2_rad, 4),
         "ttest_nfr_kemarau_vs_hujan_t": float(t_nfr_season.statistic),
         "ttest_nfr_kemarau_vs_hujan_p": float(t_nfr_season.pvalue),
+        "nfr_kemarau_vs_hujan_ci_d": ci_nfr_season,
         "mean_nfr_kemarau": float(kemarau_nfr.mean()),
         "mean_nfr_hujan": float(hujan_nfr.mean()),
         "ttest_nfr_mt2_vs_mt1_t": float(t_nfr_mt.statistic),
         "ttest_nfr_mt2_vs_mt1_p": float(t_nfr_mt.pvalue),
+        "nfr_mt2_vs_mt1_ci_d": ci_nfr_mt,
+        "ttest_rad_kemarau_vs_hujan_t": float(t_rad_season.statistic),
+        "ttest_rad_kemarau_vs_hujan_p": float(t_rad_season.pvalue),
+        "rad_kemarau_vs_hujan_ci_d": ci_rad_season,
         "regional_summary": reg_summary.round(3).to_dict(orient="records"),
     }
 
@@ -210,6 +277,80 @@ def find_optimal_threshold(y_val: np.ndarray, p_val: np.ndarray, fn_cost: float,
     return round(best_t, 2)
 
 
+def run_temporal_cv(train_full: pd.DataFrame, num_feats: list[str], cat_feats: list[str], n_splits: int = 5) -> dict:
+    """5-Fold chronological TimeSeriesSplit CV grouped by unique sorted full_date."""
+    uniq_dates = np.sort(train_full["full_date"].unique())
+    tscv = TimeSeriesSplit(n_splits=n_splits)
+    scores = {"lr_auc": [], "lr_f1": [], "rf_auc": [], "rf_f1": []}
+
+    for tr_idx, va_idx in tscv.split(uniq_dates):
+        tr_dates = set(uniq_dates[tr_idx])
+        va_dates = set(uniq_dates[va_idx])
+        tr = train_full[train_full["full_date"].isin(tr_dates)]
+        va = train_full[train_full["full_date"].isin(va_dates)]
+        y_tr, y_va = tr["target_next"].to_numpy(), va["target_next"].to_numpy()
+
+        lr_cv = Pipeline([
+            ("pre", ColumnTransformer([("num", StandardScaler(), num_feats), ("cat", OneHotEncoder(handle_unknown="ignore"), cat_feats)])),
+            ("clf", LogisticRegression(max_iter=1000, C=1.0)),
+        ])
+        rf_cv = Pipeline([
+            ("pre", ColumnTransformer([("num", "passthrough", num_feats), ("cat", OneHotEncoder(handle_unknown="ignore"), cat_feats)])),
+            ("clf", RandomForestClassifier(n_estimators=200, max_depth=10, min_samples_leaf=5, random_state=42, n_jobs=-1)),
+        ])
+
+        lr_cv.fit(tr[num_feats + cat_feats], y_tr)
+        p_lr = lr_cv.predict_proba(va[num_feats + cat_feats])[:, 1]
+        scores["lr_auc"].append(float(roc_auc_score(y_va, p_lr)))
+        scores["lr_f1"].append(float(f1_score(y_va, (p_lr >= 0.5).astype(int), zero_division=0)))
+
+        rf_cv.fit(tr[num_feats + cat_feats], y_tr)
+        p_rf = rf_cv.predict_proba(va[num_feats + cat_feats])[:, 1]
+        scores["rf_auc"].append(float(roc_auc_score(y_va, p_rf)))
+        scores["rf_f1"].append(float(f1_score(y_va, (p_rf >= 0.5).astype(int), zero_division=0)))
+
+    return {
+        "n_splits": n_splits,
+        "lr_auc_mean": round(float(np.mean(scores["lr_auc"])), 4),
+        "lr_auc_std": round(float(np.std(scores["lr_auc"])), 4),
+        "lr_f1_mean": round(float(np.mean(scores["lr_f1"])), 4),
+        "lr_f1_std": round(float(np.std(scores["lr_f1"])), 4),
+        "rf_auc_mean": round(float(np.mean(scores["rf_auc"])), 4),
+        "rf_auc_std": round(float(np.std(scores["rf_auc"])), 4),
+        "rf_f1_mean": round(float(np.mean(scores["rf_f1"])), 4),
+        "rf_f1_std": round(float(np.std(scores["rf_f1"])), 4),
+    }
+
+
+def run_fairness_audit(test_df: pd.DataFrame, p_lr: np.ndarray, threshold: float) -> dict:
+    """Equal Opportunity audit (Recall & FN Rate) at production threshold across 8 kabupaten & 2 provinsi."""
+    work = test_df[["kabupaten", "provinsi", "target_next"]].copy()
+    work["pred"] = (p_lr >= threshold).astype(int)
+
+    def summarize(group_col: str) -> dict:
+        out = {}
+        for grp, g in work.groupby(group_col):
+            pos = int((g["target_next"] == 1).sum())
+            tp = int(((g["target_next"] == 1) & (g["pred"] == 1)).sum())
+            fn = int(((g["target_next"] == 1) & (g["pred"] == 0)).sum())
+            rec = tp / pos if pos > 0 else 0.0
+            fnr = fn / pos if pos > 0 else 0.0
+            out[grp] = {"positives": pos, "tp": tp, "fn": fn, "recall": round(rec, 4), "fn_rate": round(fnr, 4)}
+        return out
+
+    by_kab = summarize("kabupaten")
+    by_prov = summarize("provinsi")
+    recalls_kab = [v["recall"] for v in by_kab.values()]
+    recalls_prov = [v["recall"] for v in by_prov.values()]
+    return {
+        "threshold": threshold,
+        "by_kabupaten": by_kab,
+        "by_provinsi": by_prov,
+        "max_recall_gap_kabupaten": round(max(recalls_kab) - min(recalls_kab), 4),
+        "max_recall_gap_provinsi": round(max(recalls_prov) - min(recalls_prov), 4),
+    }
+
+
 def run_ml_pipeline(df: pd.DataFrame) -> tuple[dict, pd.DataFrame]:
     ml_df, num_feats, cat_feats = build_ml_features(df)
 
@@ -259,10 +400,42 @@ def run_ml_pipeline(df: pd.DataFrame) -> tuple[dict, pd.DataFrame]:
 
     # Fit final models on full 2011-2022 train and evaluate on 2023-2025 test
     lr_pipe.fit(train_full[num_feats + cat_feats], y_tr_full)
+    p_lr_tr = lr_pipe.predict_proba(train_full[num_feats + cat_feats])[:, 1]
     p_lr = lr_pipe.predict_proba(test_df[num_feats + cat_feats])[:, 1]
 
     rf_pipe.fit(train_full[num_feats + cat_feats], y_tr_full)
+    p_rf_tr = rf_pipe.predict_proba(train_full[num_feats + cat_feats])[:, 1]
     p_rf = rf_pipe.predict_proba(test_df[num_feats + cat_feats])[:, 1]
+
+    # 5-Fold TimeSeriesSplit CV, Train-Test Gap, Fairness Audit & Model Export
+    cv_res = run_temporal_cv(train_full, num_feats, cat_feats, n_splits=5)
+    train_test_gap = {
+        "lr_train_auc": round(float(roc_auc_score(y_tr_full, p_lr_tr)), 4),
+        "lr_test_auc": round(float(roc_auc_score(y_te, p_lr)), 4),
+        "lr_auc_gap": round(float(roc_auc_score(y_tr_full, p_lr_tr) - roc_auc_score(y_te, p_lr)), 4),
+        "lr_train_f1": round(float(f1_score(y_tr_full, (p_lr_tr >= 0.5).astype(int))), 4),
+        "lr_test_f1": round(float(f1_score(y_te, (p_lr >= 0.5).astype(int))), 4),
+        "rf_train_auc": round(float(roc_auc_score(y_tr_full, p_rf_tr)), 4),
+        "rf_test_auc": round(float(roc_auc_score(y_te, p_rf)), 4),
+        "rf_auc_gap": round(float(roc_auc_score(y_tr_full, p_rf_tr) - roc_auc_score(y_te, p_rf)), 4),
+        "rf_train_f1": round(float(f1_score(y_tr_full, (p_rf_tr >= 0.5).astype(int))), 4),
+        "rf_test_f1": round(float(f1_score(y_te, (p_rf >= 0.5).astype(int))), 4),
+    }
+    fairness_res = run_fairness_audit(test_df, p_lr, t_lr_fn3)
+
+    MODEL_DIR.mkdir(parents=True, exist_ok=True)
+    joblib.dump(
+        {
+            "pipeline": lr_pipe,
+            "threshold": t_lr_fn3,
+            "num_feats": num_feats,
+            "cat_feats": cat_feats,
+            "model_version": "irrigation_lr_v1",
+            "fn_fp_cost_ratio": "3:1",
+        },
+        MODEL_PATH,
+    )
+    print(f"\nExported trained LR model artifact -> {MODEL_PATH}")
 
     results = {
         "train_rows": int(len(train_full)),
@@ -278,6 +451,10 @@ def run_ml_pipeline(df: pd.DataFrame) -> tuple[dict, pd.DataFrame]:
             f"Random Forest (FN:FP=5:1, t={t_fn5:.2f})": eval_preds(y_te, (p_rf >= t_fn5).astype(int), p_rf),
         },
         "thresholds_tuned_on_val_2021_2022": {"lr_fn3_fp1": t_lr_fn3, "rf_fn3_fp1": t_fn3, "rf_fn5_fp1": t_fn5},
+        "temporal_cv_5fold": cv_res,
+        "train_test_gap": train_test_gap,
+        "fairness_audit": fairness_res,
+        "model_artifact": str(MODEL_PATH),
     }
 
     # Feature importances (Random Forest)
@@ -317,8 +494,12 @@ def run_ml_pipeline(df: pd.DataFrame) -> tuple[dict, pd.DataFrame]:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Stage 4: Statistical Tests, ML H+1, CV, Fairness & Model Export")
+    parser.add_argument("--from-raw", action="store_true", help="Read directly from data/raw/*.csv instead of PostgreSQL")
+    args = parser.parse_args()
+
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    df = load_daily_from_pg()
+    df = load_daily_from_raw() if args.from_raw else load_daily_from_pg()
     assert len(df) == 43_832, f"Expected 43,832 daily rows, got {len(df)}"
 
     stat_res = run_statistical_tests(df)

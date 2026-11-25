@@ -2,16 +2,40 @@
   "stats": {
     "anova_nfr_F": 42.27838340841577,
     "anova_nfr_p": 9.139376469982957e-60,
+    "anova_nfr_eta2": 0.0101,
+    "levene_nfr_stat": 37.86393791582941,
+    "levene_nfr_p": 3.084178738675803e-53,
     "kruskal_nfr_H": 282.68107014767236,
     "kruskal_nfr_p": 3.0086461142029874e-57,
     "anova_rad_F": 50.136478311545126,
     "anova_rad_p": 1.5175655204144053e-71,
+    "anova_rad_eta2": 0.0079,
     "ttest_nfr_kemarau_vs_hujan_t": 56.38995263358088,
     "ttest_nfr_kemarau_vs_hujan_p": 0.0,
+    "nfr_kemarau_vs_hujan_ci_d": {
+      "diff": 2.1656,
+      "ci95_low": 2.0903,
+      "ci95_high": 2.2409,
+      "cohens_d": 0.7603
+    },
     "mean_nfr_kemarau": 4.4704209016393435,
     "mean_nfr_hujan": 2.3048222692166243,
     "ttest_nfr_mt2_vs_mt1_t": 41.82186341534176,
     "ttest_nfr_mt2_vs_mt1_p": 0.0,
+    "nfr_mt2_vs_mt1_ci_d": {
+      "diff": 1.4285,
+      "ci95_low": 1.3615,
+      "ci95_high": 1.4954,
+      "cohens_d": 0.4904
+    },
+    "ttest_rad_kemarau_vs_hujan_t": 43.120516545377576,
+    "ttest_rad_kemarau_vs_hujan_p": 0.0,
+    "rad_kemarau_vs_hujan_ci_d": {
+      "diff": 1.5778,
+      "ci95_low": 1.5061,
+      "ci95_high": 1.6495,
+      "cohens_d": 0.4125
+    },
     "regional_summary": [
       {
         "kabupaten": "Gunungkidul",
@@ -175,6 +199,109 @@
       "rf_fn3_fp1": 0.24,
       "rf_fn5_fp1": 0.15
     },
+    "temporal_cv_5fold": {
+      "n_splits": 5,
+      "lr_auc_mean": 0.767,
+      "lr_auc_std": 0.0283,
+      "lr_f1_mean": 0.7039,
+      "lr_f1_std": 0.0475,
+      "rf_auc_mean": 0.7698,
+      "rf_auc_std": 0.0282,
+      "rf_f1_mean": 0.7046,
+      "rf_f1_std": 0.0456
+    },
+    "train_test_gap": {
+      "lr_train_auc": 0.7864,
+      "lr_test_auc": 0.7942,
+      "lr_auc_gap": -0.0078,
+      "lr_train_f1": 0.7175,
+      "lr_test_f1": 0.7567,
+      "rf_train_auc": 0.897,
+      "rf_test_auc": 0.7902,
+      "rf_auc_gap": 0.1068,
+      "rf_train_f1": 0.814,
+      "rf_test_f1": 0.7532
+    },
+    "fairness_audit": {
+      "threshold": 0.21,
+      "by_kabupaten": {
+        "Bantul": {
+          "positives": 423,
+          "tp": 413,
+          "fn": 10,
+          "recall": 0.9764,
+          "fn_rate": 0.0236
+        },
+        "Gunungkidul": {
+          "positives": 432,
+          "tp": 426,
+          "fn": 6,
+          "recall": 0.9861,
+          "fn_rate": 0.0139
+        },
+        "Kab. Magelang": {
+          "positives": 411,
+          "tp": 393,
+          "fn": 18,
+          "recall": 0.9562,
+          "fn_rate": 0.0438
+        },
+        "Klaten": {
+          "positives": 477,
+          "tp": 474,
+          "fn": 3,
+          "recall": 0.9937,
+          "fn_rate": 0.0063
+        },
+        "Kulon Progo": {
+          "positives": 378,
+          "tp": 353,
+          "fn": 25,
+          "recall": 0.9339,
+          "fn_rate": 0.0661
+        },
+        "Purworejo": {
+          "positives": 373,
+          "tp": 357,
+          "fn": 16,
+          "recall": 0.9571,
+          "fn_rate": 0.0429
+        },
+        "Sleman": {
+          "positives": 365,
+          "tp": 360,
+          "fn": 5,
+          "recall": 0.9863,
+          "fn_rate": 0.0137
+        },
+        "Wonogiri": {
+          "positives": 438,
+          "tp": 433,
+          "fn": 5,
+          "recall": 0.9886,
+          "fn_rate": 0.0114
+        }
+      },
+      "by_provinsi": {
+        "DI Yogyakarta": {
+          "positives": 1598,
+          "tp": 1552,
+          "fn": 46,
+          "recall": 0.9712,
+          "fn_rate": 0.0288
+        },
+        "Jawa Tengah": {
+          "positives": 1699,
+          "tp": 1657,
+          "fn": 42,
+          "recall": 0.9753,
+          "fn_rate": 0.0247
+        }
+      },
+      "max_recall_gap_kabupaten": 0.0598,
+      "max_recall_gap_provinsi": 0.0041
+    },
+    "model_artifact": "models\\irrigation_lr_v1.joblib",
     "top10_rf_features": {
       "rain_mm": 0.1296,
       "nfr_mm": 0.1181,

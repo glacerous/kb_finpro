@@ -4,7 +4,9 @@ Reads DB connection from environment variables or local `.env` file:
   PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD
 """
 
+import argparse
 import io
+import json
 import os
 from pathlib import Path
 import numpy as np
@@ -15,6 +17,9 @@ from psycopg2.extras import execute_values
 from etl_fetch import END_YEAR, OUT_DIR, REGIONS, START_YEAR
 
 SCHEMA_PATH = Path("sql/schema.sql")
+QUALITY_REPORT_PATH = Path("data/processed/etl_quality_report.json")
+EXPECTED_HOURLY_ROWS = 131_496
+EXPECTED_DAILY_ROWS = 5_479
 
 # Piecewise Gowa debit curve for 1 kWp direct-driven DC pump (L/min vs W/m2)
 # shortcut: cut-in at 30 W/m2 is an assumption; run sensitivity test in Tahap 5
@@ -148,7 +153,72 @@ def build_irrigation_daily(om_df: pd.DataFrame, region_id: int, dim_date: pd.Dat
     ]
 
 
+def validate_data_quality() -> dict:
+    """Fail-fast 4-dimension Data Quality check (Uniqueness, Completeness, Accuracy, Validity)."""
+    report = {"regions": {}, "total_hourly_rows": 0, "total_daily_rows": 0, "status": "PASS"}
+    for reg in REGIONS:
+        slug = reg["slug"]
+        om_path = OUT_DIR / f"openmeteo_{slug}_{START_YEAR}_{END_YEAR}.csv"
+        np_path = OUT_DIR / f"nasapower_{slug}_{START_YEAR}_{END_YEAR}.csv"
+        assert om_path.exists(), f"Missing {om_path}"
+        assert np_path.exists(), f"Missing {np_path}"
+
+        om = pd.read_csv(om_path)
+        np_df = pd.read_csv(np_path)
+
+        # 1. Validity: exact row counts & ISO date parsing
+        assert len(om) == EXPECTED_HOURLY_ROWS, f"{slug} OM rows {len(om)} != {EXPECTED_HOURLY_ROWS}"
+        assert len(np_df) == EXPECTED_DAILY_ROWS, f"{slug} NASA rows {len(np_df)} != {EXPECTED_DAILY_ROWS}"
+        assert pd.to_datetime(om["time"], format="%Y-%m-%dT%H:%M", errors="coerce").notna().all(), f"{slug} invalid OM time"
+        assert pd.to_datetime(np_df["date"], format="%Y-%m-%d", errors="coerce").notna().all(), f"{slug} invalid NASA date"
+
+        # 2. Uniqueness: 0 duplicate timestamps/dates
+        assert om["time"].duplicated().sum() == 0, f"{slug} duplicate OM timestamps"
+        assert np_df["date"].duplicated().sum() == 0, f"{slug} duplicate NASA dates"
+
+        # 3. Completeness: 0 NULL/NaN
+        assert int(om.isna().sum().sum()) == 0, f"{slug} OM contains NaN"
+        assert int(np_df.isna().sum().sum()) == 0, f"{slug} NASA contains NaN"
+
+        # 4. Accuracy: physical bounds
+        assert om["relative_humidity_2m"].between(0, 100).all(), f"{slug} OM RH out of [0,100]"
+        assert (om["shortwave_radiation"] >= 0).all(), f"{slug} OM negative radiation"
+        assert (om["precipitation"] >= 0).all(), f"{slug} OM negative rain"
+        assert om["temperature_2m"].between(5, 50).all(), f"{slug} OM temp out of [5,50]"
+        assert np_df["RH2M"].between(0, 100).all(), f"{slug} NASA RH out of [0,100]"
+        assert (np_df["ALLSKY_SFC_SW_DWN"] >= 0).all(), f"{slug} NASA negative radiation"
+        assert (np_df["PRECTOTCORR"] >= 0).all(), f"{slug} NASA negative rain"
+        assert np_df["T2M"].between(5, 50).all(), f"{slug} NASA temp out of [5,50]"
+
+        report["regions"][slug] = {
+            "kabupaten": reg["kabupaten"],
+            "om_rows": len(om),
+            "nasa_rows": len(np_df),
+            "duplicates": 0,
+            "nulls": 0,
+            "physical_bounds_ok": True,
+        }
+        report["total_hourly_rows"] += len(om)
+        report["total_daily_rows"] += len(np_df)
+
+    QUALITY_REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    QUALITY_REPORT_PATH.write_text(json.dumps(report, indent=2), encoding="utf-8")
+    print(
+        f"[DQ PASS] 8 kabupaten verified | OM={report['total_hourly_rows']:,} | "
+        f"NASA={report['total_daily_rows']:,} | 0 dup | 0 null -> {QUALITY_REPORT_PATH}"
+    )
+    return report
+
+
 def main() -> None:
+    parser = argparse.ArgumentParser(description="ETL Quality Check & PostgreSQL Kimball Loader")
+    parser.add_argument("--quality-only", action="store_true", help="Run 4-dimension DQ checks on raw CSVs without PostgreSQL")
+    args = parser.parse_args()
+
+    validate_data_quality()
+    if args.quality_only:
+        return
+
     conn = get_conn()
     try:
         with conn:
